@@ -14,10 +14,10 @@ void drawBoxes(std::vector<BoxInfo>& finalBoxInfos, cv::Mat& raw_image){
 
 }
 
-void *open_video_stream(const char *f, int c, int w, int h, int fps)
+void *open_video_stream(const std::string& f, int c, int w, int h, int fps)
 {
     cv::VideoCapture *cap;
-    if(f) cap = new cv::VideoCapture(f);
+    if(!f.empty()) cap = new cv::VideoCapture(f.c_str());
     else cap = new cv::VideoCapture(c);
     if(!cap->isOpened()) return NULL;
     if(w) cap->set(CV_CAP_PROP_FRAME_WIDTH, w);

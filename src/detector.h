@@ -21,10 +21,6 @@ class Detector: public Model{
 
         virtual void Preprocess(cv::Mat image_in, cv::Mat& image_out);
 
-        virtual void LoadToInputTensors(cv::Mat& image);
-
-        virtual void LoadToOutputTensors();
-
         void GetTopK(std::vector<BoxInfo>& input, std::vector<BoxInfo>& output, int top_k);
         void NMS(std::vector<BoxInfo>& boxInfos,std::vector<BoxInfo>& boxInfos_left, float threshold);
 

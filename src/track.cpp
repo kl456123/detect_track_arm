@@ -29,21 +29,26 @@ int main(int argc, char** argv){
 
     std::vector<BoxInfo> finalBoxInfos;
     cv::Mat raw_image;
-    if(mode==INPUTMODE::IMAGE){
-        // read from image
-        raw_image = cv::imread(image_or_video_file.c_str());
-        tracker->Track(raw_image, finalBoxInfos);
+    bool first_frame = true;
 
-        drawBoxes(finalBoxInfos, raw_image);
-
-        cv::imwrite("./output.jpg", raw_image);
-    }else if(mode==INPUTMODE::VIDEO){
-        // read from video or camera
-        // cv::VideoCapture* cap(image_or_video_file);
-        auto cap = std::shared_ptr<cv::VideoCapture>(reinterpret_cast<cv::VideoCapture*>(open_video_stream(0, -1, 320, 240, 0)));
-        while (true) {
+    auto cap = std::shared_ptr<cv::VideoCapture>(reinterpret_cast<cv::VideoCapture*>(open_video_stream(image_or_video_file, -1, 0, 0, 0)));
+    while (true) {
+        *(cap.get()) >> raw_image;
+        if(raw_image.empty()){
+            break;
+        }
+        if(first_frame){
+            BoxInfo box_info;
+            // box_info.box = cv::selectROI("select", raw_image, false, false);
+            // cv::destroyWindow("select");
+            box_info.box.x = 311;
+            box_info.box.y = 136;
+            box_info.box.width = 120;
+            box_info.box.height = 125;
+            tracker->Init(raw_image, box_info);
+            first_frame = false;
+        }else{
             finalBoxInfos.clear();
-            *(cap.get()) >> raw_image;
             std::chrono::time_point<std::chrono::system_clock> t1 = std::chrono::system_clock::now();
             tracker->Track(raw_image, finalBoxInfos);
             std::chrono::time_point<std::chrono::system_clock> t2 = std::chrono::system_clock::now();

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 #include "Interpreter.hpp"
+#include <opencv2/opencv.hpp>
 #include "MNNDefine.h"
 #include "Tensor.hpp"
 #include <memory>
@@ -14,6 +15,9 @@ class Model{
         virtual void PrepareInputAndOutputNames();
         virtual ~Model();
         void SetUpInputAndOutputTensors();
+        virtual void LoadToInputTensors(const cv::Mat& image);
+        virtual void LoadToOutputTensors();
+        void Run(const cv::Mat& image);
 
     protected:
         std::string mModelName;

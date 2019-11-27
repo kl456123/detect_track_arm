@@ -1,7 +1,5 @@
 #include "detector.h"
 
-#define PRINT_INFERNCE_TIME
-
 
 Detector::Detector(std::string& modelName, int width, int height, float nms_threshold,
         float score_threshold):Model(modelName, width, height){
@@ -23,13 +21,13 @@ void Detector::PrepareInputAndOutputNames(){
     mOutputNames.push_back("anchors");
 }
 
-void Detector::Preprocessor(const cv::Mat raw_image, cv::Mat& image){
+void Detector::Preprocess(const cv::Mat raw_image, cv::Mat& image){
     cv::cvtColor(raw_image,image, cv::COLOR_BGR2RGB);
 
     mOriginInputSize.push_back(raw_image.rows);
     mOriginInputSize.push_back(raw_image.cols);
     // order? hw or wh
-    cv::resize(image, image, cv::Size(mInputSize[0], mInputSize[1]));
+    cv::resize(image, image, cv::Size(mInputSize[1], mInputSize[0]));
 
     image.convertTo(image, CV_32FC3);
     const float mean_vals[3] = { 123.f, 117.f, 104.f};
@@ -37,45 +35,9 @@ void Detector::Preprocessor(const cv::Mat raw_image, cv::Mat& image){
 }
 
 
-void Detector::LoadToInputTensors(cv::Mat& image){
-#ifdef PRINT_INFERNCE_TIME
-    auto t1 = std::chrono::system_clock::now();
-    // auto start = clock();
-#endif
-    // copy to tensor
-    std::vector<int> dims{1,mInputSize[0] , mInputSize[1], 3};
-    auto nhwc_Tensor = MNN::Tensor::create<float>(dims, NULL, MNN::Tensor::TENSORFLOW);
-    auto nhwc_data   = nhwc_Tensor->host<float>();
-    auto nhwc_size   = nhwc_Tensor->size();
-    ::memcpy(nhwc_data, image.data, nhwc_size);
 
-    mInputTensors[0]->copyFromHostTensor(nhwc_Tensor);
 
-#ifdef PRINT_INFERNCE_TIME
-    // clock_t end = clock();
-    // float duration = float(end - start)/CLOCKS_PER_SEC * 1000;
-    // std::cout<<"infer time: "<<duration<<" ms"<<std::endl;
-    std::chrono::time_point<std::chrono::system_clock> t2 = std::chrono::system_clock::now();
-    float dur = (float)std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count() / 1000;
-    std::cout << "input time:" << dur << "ms" << std::endl;
-#endif
-}
 
-void Detector::LoadToOutputTensors(){
-#ifdef PRINT_INFERNCE_TIME
-    auto t1 = std::chrono::system_clock::now();
-#endif
-    for(int i=0;i<mOutputTensors.size();i++){
-        auto t = mOutputTensors[i];
-        auto t_host = mOutputTensorsHost[i];
-        t->copyToHostTensor(t_host);
-    }
-#ifdef PRINT_INFERNCE_TIME
-    std::chrono::time_point<std::chrono::system_clock> t2 = std::chrono::system_clock::now();
-    float dur = (float)std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count() / 1000;
-    std::cout << "output time:" << dur << "ms" << std::endl;
-#endif
-}
 
 void Detector::GetTopK(std::vector<BoxInfo>& input, std::vector<BoxInfo>& output, int top_k)
 {
@@ -168,31 +130,11 @@ void Detector::Detect(const cv::Mat& raw_image, std::vector<BoxInfo>& finalBoxIn
     Preprocess(raw_image, image);
 
 
-    LoadToInputTensors(image);
+    Run(image);
 
-
-#ifdef PRINT_INFERNCE_TIME
-    auto t1 = std::chrono::system_clock::now();
-    // auto start = clock();
-#endif
-    // run session
-    mNet->runSession(mSession);
-#ifdef PRINT_INFERNCE_TIME
-    // clock_t end = clock();
-    // float duration = float(end - start)/CLOCKS_PER_SEC * 1000;
-    // std::cout<<"infer time: "<<duration<<" ms"<<std::endl;
-    std::chrono::time_point<std::chrono::system_clock> t2 = std::chrono::system_clock::now();
-    float dur = (float)std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count() / 1000;
-    std::cout << "infer time:" << dur << "ms" << std::endl;
-#endif
-
-    // copy back to host
-    // std::vector<MNN::Tensor*> tensors_host;
-    LoadToOutputTensors();
-
+    // postprocess
     std::vector<BoxInfo> boxInfos, boxInfos_left;
     GenerateBoxInfo(boxInfos, mScoreThreshold);
-
     // top k
     GetTopK(boxInfos, boxInfos_left, mTopK);
     // nms

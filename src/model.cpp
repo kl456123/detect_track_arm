@@ -1,4 +1,5 @@
 #include "model.h"
+#define PRINT_INFERNCE_TIME
 
 Model::Model(std::string& modelName, int width, int height){
 
@@ -59,4 +60,62 @@ Model::~Model(){
     for(auto&t: mOutputTensorsHost){
         delete t;
     }
+}
+
+void Model::LoadToInputTensors(const cv::Mat& image){
+#ifdef PRINT_INFERNCE_TIME
+    auto t1 = std::chrono::system_clock::now();
+    // auto start = clock();
+#endif
+    // copy to tensor
+    std::vector<int> dims{1,mInputSize[0] , mInputSize[1], 3};
+    auto nhwc_Tensor = MNN::Tensor::create<float>(dims, NULL, MNN::Tensor::TENSORFLOW);
+    auto nhwc_data   = nhwc_Tensor->host<float>();
+    auto nhwc_size   = nhwc_Tensor->size();
+    ::memcpy(nhwc_data, image.data, nhwc_size);
+
+    mInputTensors[0]->copyFromHostTensor(nhwc_Tensor);
+
+#ifdef PRINT_INFERNCE_TIME
+    // clock_t end = clock();
+    // float duration = float(end - start)/CLOCKS_PER_SEC * 1000;
+    // std::cout<<"infer time: "<<duration<<" ms"<<std::endl;
+    std::chrono::time_point<std::chrono::system_clock> t2 = std::chrono::system_clock::now();
+    float dur = (float)std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count() / 1000;
+    std::cout << "input time:" << dur << "ms" << std::endl;
+#endif
+}
+
+void Model::LoadToOutputTensors(){
+#ifdef PRINT_INFERNCE_TIME
+    auto t1 = std::chrono::system_clock::now();
+#endif
+    for(int i=0;i<mOutputTensors.size();i++){
+        auto t = mOutputTensors[i];
+        auto t_host = mOutputTensorsHost[i];
+        t->copyToHostTensor(t_host);
+    }
+#ifdef PRINT_INFERNCE_TIME
+    std::chrono::time_point<std::chrono::system_clock> t2 = std::chrono::system_clock::now();
+    float dur = (float)std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count() / 1000;
+    std::cout << "output time:" << dur << "ms" << std::endl;
+#endif
+}
+
+void Model::Run(const cv::Mat& image){
+    LoadToInputTensors(image);
+
+#ifdef PRINT_INFERNCE_TIME
+    auto t1 = std::chrono::system_clock::now();
+    // auto start = clock();
+#endif
+    // run session
+    mNet->runSession(mSession);
+#ifdef PRINT_INFERNCE_TIME
+    std::chrono::time_point<std::chrono::system_clock> t2 = std::chrono::system_clock::now();
+    float dur = (float)std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count() / 1000;
+    std::cout << "infer time:" << dur << "ms" << std::endl;
+#endif
+
+    LoadToOutputTensors();
 }

@@ -39,7 +39,7 @@ int main(int argc, char** argv){
     }else if(mode==INPUTMODE::VIDEO){
         // read from video or camera
         // cv::VideoCapture* cap(image_or_video_file);
-        auto cap = std::shared_ptr<cv::VideoCapture>(reinterpret_cast<cv::VideoCapture*>(open_video_stream(0, -1, 320, 240, 0)));
+        auto cap = std::shared_ptr<cv::VideoCapture>(reinterpret_cast<cv::VideoCapture*>(open_video_stream(image_or_video_file, -1, 320, 240, 0)));
         while (true) {
             finalBoxInfos.clear();
             *(cap.get()) >> raw_image;
