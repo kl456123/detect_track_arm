@@ -20,7 +20,7 @@ class Tracker: public Model{
 
         void Track(const cv::Mat& raw_image, std::vector<BoxInfo>& finalBoxInfos);
         virtual void Preprocess(const cv::Mat& raw_image,cv::Mat& image, const BoxInfo& init_state);
-        virtual void Postprocess();
+        virtual void Postprocess(float scale_z, float image_width, float image_height, BoxInfo& finalBoxInfo);
         void Init(const cv::Mat& raw_image,const BoxInfo& init_state);
         void CropFromImage(const cv::Mat& raw_image, cv::Mat& image, float crop_size, const std::vector<int>& size);
         virtual void LoadToInputTensors(const cv::Mat& image);
@@ -36,5 +36,8 @@ class Tracker: public Model{
         std::string mTemplateModelName;
 
         cv::Scalar mChannelAverage;
+        float mLR;
+        float mWindowInfluence;
+        float mPenaltyK;
 
 };

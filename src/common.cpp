@@ -52,3 +52,8 @@ float iou(cv::Rect box0, cv::Rect box1)
     if (u <= 0.0) return 0.0f;
     else          return i/u;
 }
+
+float get_size(float w, float h){
+    float pad  = (w+h)*0.5;
+    return std::sqrt((w+pad)*(h+pad));
+}

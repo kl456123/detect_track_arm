@@ -39,12 +39,8 @@ int main(int argc, char** argv){
         }
         if(first_frame){
             BoxInfo box_info;
-            // box_info.box = cv::selectROI("select", raw_image, false, false);
-            // cv::destroyWindow("select");
-            box_info.box.x = 311;
-            box_info.box.y = 136;
-            box_info.box.width = 120;
-            box_info.box.height = 125;
+            box_info.box = cv::selectROI("select", raw_image, false, false);
+            cv::destroyWindow("select");
             tracker->Init(raw_image, box_info);
             first_frame = false;
         }else{

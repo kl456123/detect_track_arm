@@ -4,6 +4,7 @@
 #include <string>
 #include "Interpreter.hpp"
 #include <opencv2/opencv.hpp>
+#include <chrono>
 #include "MNNDefine.h"
 #include "Tensor.hpp"
 #include <memory>
