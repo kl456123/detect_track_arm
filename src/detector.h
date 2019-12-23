@@ -21,21 +21,24 @@ class Detector: public Model{
 
         virtual void Preprocess(cv::Mat image_in, cv::Mat& image_out);
 
-        void GetTopK(std::vector<BoxInfo>& input, std::vector<BoxInfo>& output, int top_k);
+        void GetTopK(std::vector<BoxInfo>& input, int top_k);
         void NMS(std::vector<BoxInfo>& boxInfos,std::vector<BoxInfo>& boxInfos_left, float threshold);
 
         void GenerateBoxInfo(std::vector<BoxInfo>& boxInfos, float score_threshold);
         virtual void Detect(const cv::Mat& raw_image, std::vector<BoxInfo>& finalBoxInfos);
 
         virtual void PrepareInputAndOutputNames()override;
+        void InitInputAndOutput();
 
 
-    private:
+    protected:
         std::vector<float> mVariance;
 
-        int mTopK = 100;
+        int mTopK;
         float mScoreThreshold;
         float mNMSThreshold;
+        // num of total classes including bg
+        int mNumOfClasses;
 
 };
 

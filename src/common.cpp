@@ -1,6 +1,48 @@
 #include "common.h"
+#ifdef USE_SDK
+#include "instance_manager.h"
+#endif
+#include <stdlib.h>
+#include <stdio.h>
+#include <sstream>
 
-void drawBoxes(std::vector<BoxInfo>& finalBoxInfos, cv::Mat& raw_image){
+static std::vector<std::string> class_names{"bg", "person", "pet_cat", "pet_dog",\
+    "sofa", "table", "bed", "excrement", "wire", "key"};
+
+#ifdef USE_SDK
+void drawInstance(const std::vector<InstanceInfo>& instance_infos, cv::Mat& raw_image){
+    // visualize bbox
+    for (auto& face: instance_infos)
+    {
+        cv::Rect vis_box;
+        vis_box.x = (int) face.box.x;
+        vis_box.y = (int) face.box.y;
+        vis_box.width  = (int) face.box.width;
+        vis_box.height = (int) face.box.height;
+        auto color = cv::Scalar(0,0,255);
+        cv::rectangle(raw_image, vis_box, color, 2);
+        // show txt
+        auto font = cv::FONT_HERSHEY_SIMPLEX;
+        std::stringstream ss;
+        ss.precision(3);
+        ss<<class_names[face.class_name]<<" "<<face.instance_id;
+        auto txt = ss.str();
+        int baseline;
+        float font_scale=0.5;
+        cv::Size cat_size = cv::getTextSize(txt, font,font_scale, 2, &baseline);
+
+        // get color for specific class
+        cv::rectangle(raw_image,
+                cv::Rect(face.box.x, face.box.y - cat_size.height - 2+face.box.height,
+                    cat_size.width, cat_size.height), color, -1);
+        int thickness = 1;
+        cv::putText(raw_image, txt, cv::Point(face.box.x, face.box.y - 2+face.box.height),
+                font,font_scale, cv::Scalar(0,0,0), thickness, cv::LINE_AA);
+    }
+}
+#endif
+
+void drawBoxes(const std::vector<BoxInfo>& finalBoxInfos, cv::Mat& raw_image){
     // visualize bbox
     for (auto& face: finalBoxInfos)
     {
@@ -9,7 +51,25 @@ void drawBoxes(std::vector<BoxInfo>& finalBoxInfos, cv::Mat& raw_image){
         vis_box.y = (int) face.box.y;
         vis_box.width  = (int) face.box.width;
         vis_box.height = (int) face.box.height;
-        cv::rectangle(raw_image, vis_box, cv::Scalar(0,0,255), 1);
+        auto color = cv::Scalar(0,0,255);
+        cv::rectangle(raw_image, vis_box, color, 2);
+        // show txt
+        auto font = cv::FONT_HERSHEY_SIMPLEX;
+        std::stringstream ss;
+        ss.precision(3);
+        ss<<class_names[face.class_name]<<" "<<face.score;
+        auto txt = ss.str();
+        int baseline;
+        float font_scale = 0.5;
+        cv::Size cat_size = cv::getTextSize(txt, font, font_scale, 2, &baseline);
+
+        // get color for specific class
+        cv::rectangle(raw_image,
+                cv::Rect(face.box.x, face.box.y - cat_size.height - 2+face.box.height,
+                    cat_size.width, cat_size.height), color, -1);
+        int thickness = 1;
+        cv::putText(raw_image, txt, cv::Point(face.box.x, face.box.y - 2+face.box.height),
+                font, font_scale, cv::Scalar(0,0,0), thickness, cv::LINE_AA);
     }
 
 }
@@ -27,7 +87,7 @@ void *open_video_stream(const std::string& f, int c, int w, int h, int fps)
 }
 
 void loadOpenCLLib(){
-    auto handle = dlopen("/home/indemind/Documents/MNN/build/source/backend/opencl/libMNN_CL.so", RTLD_NOW);
+    auto handle = dlopen("/usr/local/lib/libMNN_CL.so", RTLD_NOW);
     FUNC_PRINT_ALL(handle, p);
 }
 
@@ -56,4 +116,16 @@ float iou(cv::Rect box0, cv::Rect box1)
 float get_size(float w, float h){
     float pad  = (w+h)*0.5;
     return std::sqrt((w+pad)*(h+pad));
+}
+
+void softmax(float* data_in,float* data_out, int num){
+    float exp[num];
+    float total_sum=0;
+    for(int i=0;i<num;i++){
+        exp[i] = std::exp(data_in[i]);
+        total_sum+=exp[i];
+    }
+    for(int i=0;i<num;i++){
+        data_out[i] = exp[i]/total_sum;
+    }
 }

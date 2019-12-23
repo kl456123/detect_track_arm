@@ -9,16 +9,22 @@ Detector::Detector(std::string& modelName, int width, int height, float nms_thre
     mVariance.push_back(0.2);
     mScoreThreshold = score_threshold;
     mNMSThreshold   = nms_threshold;
+    mTopK = 100;
+}
 
-
+void Detector::InitInputAndOutput(){
     PrepareInputAndOutputNames();
     SetUpInputAndOutputTensors();
+    auto dims = mInputTensors[0]->shape();
+    mInputSize[1] = dims[3];
+    mInputSize[0] = dims[2];
 }
 
 void Detector::PrepareInputAndOutputNames(){
     mOutputNames.push_back("cls_logits");
     mOutputNames.push_back("bbox_preds");
     mOutputNames.push_back("anchors");
+    // mOutputNames = {"hm", "wh", "reg"};
 }
 
 void Detector::Preprocess(const cv::Mat raw_image, cv::Mat& image){
@@ -39,7 +45,8 @@ void Detector::Preprocess(const cv::Mat raw_image, cv::Mat& image){
 
 
 
-void Detector::GetTopK(std::vector<BoxInfo>& input, std::vector<BoxInfo>& output, int top_k)
+
+void Detector::GetTopK(std::vector<BoxInfo>& input, int top_k)
 {
     std::sort(input.begin(), input.end(),
             [](const BoxInfo& a, const BoxInfo& b)
@@ -47,13 +54,8 @@ void Detector::GetTopK(std::vector<BoxInfo>& input, std::vector<BoxInfo>& output
             return a.score > b.score;
             });
 
-    if (input.size() > top_k) {
-        for (int k = 0; k < top_k; k++) {
-            output.push_back(input[k]);
-        }
-    }
-    else {
-        output = input;
+    if(top_k<input.size()){
+        input.erase(input.begin()+top_k, input.end());
     }
 }
 
@@ -89,6 +91,7 @@ void Detector::GenerateBoxInfo(std::vector<BoxInfo>& boxInfos, float score_thres
     int num_boxes = tensors_host[0]->channel();
     int raw_image_width = mOriginInputSize[1];
     int raw_image_height = mOriginInputSize[0];
+    mNumOfClasses = tensors_host[0]->shape()[3];
 
     for(int i = 0; i < num_boxes; ++i)
     {
@@ -104,20 +107,39 @@ void Detector::GenerateBoxInfo(std::vector<BoxInfo>& boxInfos, float score_thres
         float xmax    = ( xcenter + w * 0.5 ) * raw_image_width;
 
         // probability decoding, softmax
-        float nonface_prob = exp(scores_dataPtr[i*2 + 0]);
-        float face_prob    = exp(scores_dataPtr[i*2 + 1]);
+        float total_sum = exp(scores_dataPtr[i*mNumOfClasses + 0]);
+        // init
+        int max_id = 0;
+        float max_prob=0;
 
-        float ss           = nonface_prob + face_prob;
-        nonface_prob       /= ss;
-        face_prob          /= ss;
+        for(int j=1;j<mNumOfClasses;j++){
+            float logit = exp(scores_dataPtr[i*mNumOfClasses + j]);
+            total_sum  += logit;
+            if(max_prob<logit){
+                max_prob = logit;
+                max_id = j;
+            }
+        }
 
-        if (face_prob > score_threshold) {
+        max_prob /= total_sum;
+
+
+        if (max_prob > score_threshold) {
             BoxInfo tmp_face;
             tmp_face.box.x = xmin;
             tmp_face.box.y = ymin;
             tmp_face.box.width  = xmax - xmin;
             tmp_face.box.height = ymax - ymin;
-            tmp_face.score = face_prob;
+
+            // center
+            tmp_face.cx = (xmin+xmax)/2.0;
+            tmp_face.cy = (ymin+ymax)/2.0;
+
+            tmp_face.height = tmp_face.box.height;
+            tmp_face.width = tmp_face.box.width;
+
+            tmp_face.score = max_prob;
+            tmp_face.class_name = static_cast<CLASS_NAME>(max_id);
             boxInfos.push_back(tmp_face);
         }
     }
@@ -127,18 +149,21 @@ void Detector::GenerateBoxInfo(std::vector<BoxInfo>& boxInfos, float score_thres
 void Detector::Detect(const cv::Mat& raw_image, std::vector<BoxInfo>& finalBoxInfos){
     // preprocess
     cv::Mat image;
+    std::cout<<"Preprocessing "<<std::endl;
     Preprocess(raw_image, image);
 
 
+    std::cout<<"Running "<<std::endl;
     Run(image);
 
+    std::cout<<"Postprocessing "<<std::endl;
     // postprocess
-    std::vector<BoxInfo> boxInfos, boxInfos_left;
+    std::vector<BoxInfo> boxInfos;
     GenerateBoxInfo(boxInfos, mScoreThreshold);
     // top k
-    GetTopK(boxInfos, boxInfos_left, mTopK);
+    GetTopK(boxInfos, mTopK);
     // nms
-    NMS(boxInfos_left, finalBoxInfos, mNMSThreshold);
+    NMS(boxInfos, finalBoxInfos, mNMSThreshold);
 
     // handle corner case
 }
