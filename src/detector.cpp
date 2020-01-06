@@ -21,13 +21,14 @@ void Detector::InitInputAndOutput(){
 }
 
 void Detector::PrepareInputAndOutputNames(){
-    mOutputNames.push_back("cls_logits");
-    mOutputNames.push_back("bbox_preds");
+    mOutputNames.push_back("cls_and_bbox");
+    // mOutputNames.push_back("cls_logits");
+    // mOutputNames.push_back("bbox_preds");
     mOutputNames.push_back("anchors");
     // mOutputNames = {"hm", "wh", "reg"};
 }
 
-void Detector::Preprocess(const cv::Mat raw_image, cv::Mat& image){
+void Detector::Preprocess(const cv::Mat& raw_image, cv::Mat& image){
     cv::cvtColor(raw_image,image, cv::COLOR_BGR2RGB);
 
     mOriginInputSize.push_back(raw_image.rows);
@@ -85,21 +86,23 @@ void Detector::NMS(std::vector<BoxInfo>& tmp_faces, std::vector<BoxInfo>& faces,
 void Detector::GenerateBoxInfo(std::vector<BoxInfo>& boxInfos, float score_threshold){
     auto tensors_host = mOutputTensorsHost;
 
-    auto scores_dataPtr  = tensors_host[0]->host<float>();
-    auto boxes_dataPtr   = tensors_host[1]->host<float>();
-    auto anchors_dataPtr = tensors_host[2]->host<float>();
+    // auto scores_dataPtr  = tensors_host[0]->host<float>();
+    // auto boxes_dataPtr   = tensors_host[1]->host<float>();
+    auto scores_and_boxes_dataPtr = tensors_host[0]->host<float>();
+    auto anchors_dataPtr = tensors_host[1]->host<float>();
     int num_boxes = tensors_host[0]->channel();
     int raw_image_width = mOriginInputSize[1];
     int raw_image_height = mOriginInputSize[0];
-    mNumOfClasses = tensors_host[0]->shape()[3];
+    mNumOfClasses = tensors_host[0]->shape()[3]-4;
+    int num_cols = mNumOfClasses+4;
 
     for(int i = 0; i < num_boxes; ++i)
     {
         // location decoding
-        float ycenter =     boxes_dataPtr[i*4 + 1] * mVariance[1]  * anchors_dataPtr[i*4 + 3] + anchors_dataPtr[i*4 + 1];
-        float xcenter =     boxes_dataPtr[i*4 + 0] * mVariance[0]  * anchors_dataPtr[i*4 + 2] + anchors_dataPtr[i*4 + 0];
-        float h       = exp(boxes_dataPtr[i*4 + 3] * mVariance[3]) * anchors_dataPtr[i*4 + 3];
-        float w       = exp(boxes_dataPtr[i*4 + 2] * mVariance[2]) * anchors_dataPtr[i*4 + 2];
+        float ycenter =     scores_and_boxes_dataPtr[i*num_cols + +mNumOfClasses+1] * mVariance[1]  * anchors_dataPtr[i*4 + 3] + anchors_dataPtr[i*4 + 1];
+        float xcenter =     scores_and_boxes_dataPtr[i*num_cols + mNumOfClasses+0] * mVariance[0]  * anchors_dataPtr[i*4 + 2] + anchors_dataPtr[i*4 + 0];
+        float h       = exp(scores_and_boxes_dataPtr[i*num_cols + mNumOfClasses+3] * mVariance[3]) * anchors_dataPtr[i*4 + 3];
+        float w       = exp(scores_and_boxes_dataPtr[i*num_cols + mNumOfClasses+2] * mVariance[2]) * anchors_dataPtr[i*4 + 2];
 
         float ymin    = ( ycenter - h * 0.5 ) * raw_image_height;
         float xmin    = ( xcenter - w * 0.5 ) * raw_image_width;
@@ -107,13 +110,13 @@ void Detector::GenerateBoxInfo(std::vector<BoxInfo>& boxInfos, float score_thres
         float xmax    = ( xcenter + w * 0.5 ) * raw_image_width;
 
         // probability decoding, softmax
-        float total_sum = exp(scores_dataPtr[i*mNumOfClasses + 0]);
+        float total_sum = exp(scores_and_boxes_dataPtr[i*num_cols + 0]);
         // init
         int max_id = 0;
         float max_prob=0;
 
         for(int j=1;j<mNumOfClasses;j++){
-            float logit = exp(scores_dataPtr[i*mNumOfClasses + j]);
+            float logit = exp(scores_and_boxes_dataPtr[i*num_cols + j]);
             total_sum  += logit;
             if(max_prob<logit){
                 max_prob = logit;

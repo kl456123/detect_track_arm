@@ -82,6 +82,7 @@ int main(int argc, char** argv){
             std::chrono::time_point<std::chrono::system_clock> t1 = std::chrono::system_clock::now();
             // first detect
             detector->Detect(raw_image, finalBoxInfos);
+            detector->WaitFinish();
             // manage detection result
 #ifdef USE_SDK
             instance_manager->GetInstancesInfo(finalBoxInfos, pose, instance_infos);

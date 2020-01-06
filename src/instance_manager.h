@@ -24,12 +24,15 @@ struct InstanceInfo{
     float time;
 
     // scale
-    int scale;
+    float scale;
 
     // used calc iou in image
     cv::Rect box;
 
     int _count;
+
+    // 3 points
+    float front_face_points[3][3];
 };
 
 
@@ -68,5 +71,8 @@ class InstanceManager{
         bool mIgnoreFlyThing;
         std::vector<float> mClipRange;
         int mCountThresh;
+        std::vector<float> mMeanSizes;
+        // allow detector missing it
+        std::vector<float> mSoftBoundary;
 };
 #endif

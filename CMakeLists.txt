@@ -5,7 +5,8 @@ cmake_minimum_required(VERSION 2.8)
 #2.project name
 project(test C CXX)
 
-option(USE_SDK "Enable stereo camera" OFF)
+option(BUILD_SDK "Enable stereo camera" OFF)
+option(BUILD_TRACKER "Build tracker" OFF)
 
 #opencv
 find_package(OpenCV REQUIRED)
@@ -24,7 +25,7 @@ link_directories(${CMAKE_CURRENT_LIST_DIR}/MNN/lib)
 
 # mnn lib
 add_library( MNN SHARED IMPORTED )
-if (USE_SDK)
+if (BUILD_SDK)
     add_definitions(-DUSE_SDK)
     include_directories(${CMAKE_CURRENT_LIST_DIR}/src/sdk)
     add_subdirectory(./src/sdk)
@@ -52,23 +53,25 @@ list(APPEND DETECTOR_CPP ${CMAKE_CURRENT_LIST_DIR}/src/detect.cpp
 
 
 set(DETECTOR_DEPEND MNN)
-if (USE_SDK)
+if (BUILD_SDK)
     list(APPEND DETECTOR_DEPEND SDK)
     list(APPEND DETECTOR_CPP ${CMAKE_CURRENT_LIST_DIR}/src/instance_manager.cpp)
 endif()
 
 add_executable(detector ${DETECTOR_CPP})
-
-add_executable(tracker ${CMAKE_CURRENT_LIST_DIR}/src/track.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/src/tracker.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/src/model.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/src/common.cpp)
-
 target_link_libraries(detector
     ${DETECTOR_DEPEND}
     ${OpenCV_LIBS} -ldl
     )
-target_link_libraries(tracker
-    MNN
-    ${OpenCV_LIBS} -ldl
-    )
+
+if(BUILD_TRACKER)
+    add_executable(tracker ${CMAKE_CURRENT_LIST_DIR}/src/track.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/tracker.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/model.cpp
+        ${CMAKE_CURRENT_LIST_DIR}/src/common.cpp)
+
+    target_link_libraries(tracker
+        MNN
+        ${OpenCV_LIBS} -ldl
+        )
+endif()

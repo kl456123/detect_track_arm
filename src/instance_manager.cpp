@@ -17,13 +17,15 @@ InstanceManager::InstanceManager(){
     mIntrinsicMatrix = Eigen::Matrix<double, 3, 3>::Identity();
     mTranslationMatrix = Eigen::Matrix<double,3,1>::Zero();
     mRotationMatrix = Eigen::Matrix<double, 3,3>::Identity();
-    mDistanceThresh = 0.1;
+    mDistanceThresh = 4;
     mIou2dThresh = 0.5;
     mUsed2d = false;
 
     mClipRange = {0.f, 2.f};
-    mIgnoreFlyThing = false;
+    mIgnoreFlyThing = true;
     mCountThresh = 3;
+    mMeanSizes = {0.5, 0.3, 0.3, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1};
+    mSoftBoundary = {20, 20};
 }
 
 
@@ -57,26 +59,40 @@ void InstanceManager::GetInstancesInfo(const std::vector<BoxInfo>& box_infos, Im
     for(auto&box_info: box_infos){
         InstanceInfo instance_info;
         // calculate location in world coords system
-        Eigen::Vector3d v_3d(box_info.cx * s, s*(box_info.cy  +0.5*box_info.height), 1.0);
+        Eigen::MatrixXd points(3, 3);
+        Eigen::Vector3d v_3d1((box_info.cx-0.5*box_info.height) * s, s*(box_info.cy  +0.5*box_info.height), 1.0);
+        Eigen::Vector3d v_3d2(box_info.cx * s, s*(box_info.cy  +0.5*box_info.height), 1.0);
+        Eigen::Vector3d v_3d3((box_info.cx+0.5*box_info.height) * s, s*(box_info.cy  +0.5*box_info.height), 1.0);
+        points<<v_3d1, v_3d2, v_3d3;
 
         // ignore object above the primary point
         float cx = mIntrinsicMatrix(0, 2);
         float cy = mIntrinsicMatrix(1, 2);
-        if(mIgnoreFlyThing && v_3d(1)<cy){
-            continue;
-        }
 
-        auto tmp = mIntrinsicMatrix.inverse() * v_3d;
+
+        auto tmp = mIntrinsicMatrix.inverse() * points;
         double scale = mCameraHeight/tmp(1);
         auto location = tmp*scale;
-        auto new_location = mRotationMatrix * location + mTranslationMatrix;
+
+        float depth = location(2, 1);
+        if(mIgnoreFlyThing && (depth>mClipRange[1] || depth<mClipRange[0])){
+            continue;
+        }
+        auto front_face_points = (mRotationMatrix * location).colwise() + mTranslationMatrix;
 
         instance_info.class_name = box_info.class_name;
+        // the mid point as final location
         for(int i=0;i<3;i++){
-            instance_info.location[i] = new_location(i);
+            instance_info.location[i] = front_face_points(i, 1);
+        }
+        for(int i=0;i<3;i++){
+            for(int j=0;j<3;j++){
+                instance_info.front_face_points[i][j] = front_face_points(j,i);
+            }
         }
 
-        instance_info.scale = 0.2;
+        // instance_info.scale = mMeanSizes[static_cast<int>(instance_info.class_name)-1];
+        instance_info.scale = (front_face_points.col(0)-front_face_points.col(2)).squaredNorm();
         instance_info.box = box_info.box;
         instance_info._count = 0;
 
@@ -143,7 +159,7 @@ void InstanceManager::GetVisibleInstanceId(std::vector<int>& ids){
         float x = camera_point_2d_homo(0);
         float y = camera_point_2d_homo(1);
         bool depth_cond = depth<mClipRange[1] && depth>mClipRange[0];
-        bool spatial_cond = x>=0 && x<1280 && y>=0 && y<800;
+        bool spatial_cond = x>=0+mSoftBoundary[0] && x<1280-mSoftBoundary[0] && y>=0+mSoftBoundary[1] && y<800-mSoftBoundary[1];
         if(spatial_cond && depth_cond){
             ids.push_back(instance_info.instance_id);
         }
@@ -192,7 +208,7 @@ int InstanceManager::GetInstanceId(const InstanceInfo& target, bool use_2d, bool
         }
 
         // match or insert new instance
-        if(min_dist > mDistanceThresh){
+        if(min_dist > mDistanceThresh * target.scale){
             int id = generateInstanceId();
             mInstancesMap.insert(std::make_pair(id,target));
             matched = false;

@@ -19,7 +19,7 @@ class Detector: public Model{
     public:
         Detector(std::string& modelName, int width=160, int height=160, float nms_threshold=0.45f, float score_threshold=0.3f);
 
-        virtual void Preprocess(cv::Mat image_in, cv::Mat& image_out);
+        virtual void Preprocess(const cv::Mat& image_in, cv::Mat& image_out);
 
         void GetTopK(std::vector<BoxInfo>& input, int top_k);
         void NMS(std::vector<BoxInfo>& boxInfos,std::vector<BoxInfo>& boxInfos_left, float threshold);

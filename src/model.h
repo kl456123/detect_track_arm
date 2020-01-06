@@ -19,6 +19,7 @@ class Model{
         virtual void LoadToInputTensors(const cv::Mat& image);
         virtual void LoadToOutputTensors();
         void Run(const cv::Mat& image);
+        void WaitFinish();
 
     protected:
         std::string mModelName;
@@ -38,6 +39,8 @@ class Model{
 
         std::vector<std::string> mInputNames;
         std::vector<std::string> mOutputNames;
+
+        bool mFirst;
 
 };
 #endif

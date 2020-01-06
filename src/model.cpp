@@ -1,4 +1,5 @@
 #include "model.h"
+#include "Backend.hpp"
 #define PRINT_INFERNCE_TIME
 
 Model::Model(std::string& modelName, int width, int height){
@@ -29,6 +30,12 @@ Model::Model(std::string& modelName, int width, int height){
     // create session
     mSession = mNet->createSession(mConfig);
     mNet->releaseModel();
+    mFirst = true;
+}
+
+void Model::WaitFinish(){
+    const MNN::Backend* backend = mNet->getBackend(mSession, mOutputTensors[0]);
+    const_cast<MNN::Backend*>(backend)->onWaitFinish();
 }
 
 void Model::SetUpInputAndOutputTensors(){
@@ -97,8 +104,12 @@ void Model::LoadToOutputTensors(){
         std::cout<<i<<std::endl;
         auto t = mOutputTensors[i];
         auto t_host = mOutputTensorsHost[i];
+        if(!mFirst &&i==1){
+            continue;
+        }
         t->copyToHostTensor(t_host);
     }
+    mFirst = false;
 #ifdef PRINT_INFERNCE_TIME
     std::chrono::time_point<std::chrono::system_clock> t2 = std::chrono::system_clock::now();
     float dur = (float)std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count() / 1000;
