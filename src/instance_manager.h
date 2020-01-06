@@ -74,5 +74,7 @@ class InstanceManager{
         std::vector<float> mMeanSizes;
         // allow detector missing it
         std::vector<float> mSoftBoundary;
+        float mMaxScale;
+        float mMinScale;
 };
 #endif
