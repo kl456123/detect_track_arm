@@ -63,9 +63,9 @@ void InstanceManager::GetInstancesInfo(const std::vector<BoxInfo>& box_infos, Im
         InstanceInfo instance_info;
         // calculate location in world coords system
         Eigen::MatrixXd points(3, 3);
-        Eigen::Vector3d v_3d1((box_info.cx-0.5*box_info.height) * s, s*(box_info.cy  +0.5*box_info.height), 1.0);
+        Eigen::Vector3d v_3d1((box_info.cx-0.5*box_info.width) * s, s*(box_info.cy  +0.5*box_info.height), 1.0);
         Eigen::Vector3d v_3d2(box_info.cx * s, s*(box_info.cy  +0.5*box_info.height), 1.0);
-        Eigen::Vector3d v_3d3((box_info.cx+0.5*box_info.height) * s, s*(box_info.cy  +0.5*box_info.height), 1.0);
+        Eigen::Vector3d v_3d3((box_info.cx+0.5*box_info.width) * s, s*(box_info.cy  +0.5*box_info.height), 1.0);
         points<<v_3d1, v_3d2, v_3d3;
 
         // ignore object above the primary point
