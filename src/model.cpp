@@ -104,9 +104,7 @@ void Model::LoadToOutputTensors(){
         std::cout<<i<<std::endl;
         auto t = mOutputTensors[i];
         auto t_host = mOutputTensorsHost[i];
-        if(!mFirst &&i==1){
-            continue;
-        }
+
         t->copyToHostTensor(t_host);
     }
     mFirst = false;

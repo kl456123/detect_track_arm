@@ -10,7 +10,9 @@ CenterNetDetector::CenterNetDetector(std::string& modelName, int width, int heig
 }
 
 void CenterNetDetector::PrepareInputAndOutputNames(){
-    mOutputNames = {"hm", "wh", "reg"};
+    // too many output will crash the program
+    // mOutputNames = {"hm", "wh", "reg"};
+    mOutputNames =  {"total"};
 }
 
 void CenterNetDetector::Preprocess(const cv::Mat raw_image, cv::Mat& image){
@@ -25,18 +27,6 @@ void CenterNetDetector::Preprocess(const cv::Mat raw_image, cv::Mat& image){
     inp_image.convertTo(inp_image, CV_32FC3);
     const float mean_vals[3] = { 0.408, 0.447, 0.47};
     const float std_vals[3] = { 0.289, 0.274, 0.278};
-    // float* data_ptr = (float*)inp_image.data;
-    // for(int c=0;c<3;c++){
-    // for(int i=0;i<inp_image.rows;i++){
-    // for(int j=0;j<inp_image.cols;j++){
-    // int index = (inp_image.cols*i+j)*3+c;
-    // data_ptr[index] = (data_ptr[index]/255.0-mean_vals[c])/std_vals[c];
-    // // inp_image.at<cv::Vec3f>(i,j)[c]= (inp_image.at<cv::Vec3f>(i,j)[c]/255.0-mean_vals[c])/std_vals[c];
-    // }
-    // }
-    // }
-    // image = inp_image;
-    // image = (image / 255.0 - cv::Scalar(mean_vals[0], mean_vals[1], mean_vals[2]));
 
     std::vector<cv::Mat>mv;
     cv::split(inp_image, mv);
@@ -57,13 +47,15 @@ void CenterNetDetector::Preprocess(const cv::Mat raw_image, cv::Mat& image){
 void CenterNetDetector::GenerateBoxInfo(std::vector<BoxInfo>& top_boxes, float score_threshold){
     auto tensors_host = mOutputTensorsHost;
 
-    auto hm_dataPtr  = tensors_host[0]->host<float>();
-    auto wh_dataPtr   = tensors_host[1]->host<float>();
-    auto reg_dataPtr = tensors_host[2]->host<float>();
+    // auto hm_dataPtr  = tensors_host[0]->host<float>();
+    // auto wh_dataPtr   = tensors_host[1]->host<float>();
+    // auto reg_dataPtr = tensors_host[2]->host<float>();
+    auto total_dataPtr = tensors_host[0]->host<float>();
+
 
     int raw_image_width = mOriginInputSize[1];
     int raw_image_height = mOriginInputSize[0];
-    mNumOfClasses = tensors_host[0]->channel();
+    mNumOfClasses = tensors_host[0]->channel() - 4;
 
     auto spatial_dims = tensors_host[0]->shape();
 
@@ -72,6 +64,9 @@ void CenterNetDetector::GenerateBoxInfo(std::vector<BoxInfo>& top_boxes, float s
     // sigmoid for heatmap
 
     int spatial_size = spatial_dims[2]* spatial_dims[3];
+    auto reg_dataPtr = total_dataPtr+mNumOfClasses*spatial_size;
+    auto wh_dataPtr =  total_dataPtr+(mNumOfClasses+2)*spatial_size;
+
     for(int c=0;c<mNumOfClasses;c++){
         std::vector<BoxInfo> top_boxes_per_classes;
         for(int i=0;i<spatial_dims[2];i++){
@@ -86,7 +81,7 @@ void CenterNetDetector::GenerateBoxInfo(std::vector<BoxInfo>& top_boxes, float s
                         continue;
                     }
                     int index = tmp_i*spatial_dims[3] + tmp_j;
-                    float value = hm_dataPtr[index];
+                    float value = total_dataPtr[index];
                     if(max<value){
                         max = value;
                         max_id = k;
@@ -96,12 +91,12 @@ void CenterNetDetector::GenerateBoxInfo(std::vector<BoxInfo>& top_boxes, float s
                     continue;
                 }
                 int index = (i+max_id/3-1)* spatial_dims[3] + (j+max_id%3-1);
-                if(hm_dataPtr[index]<score_threshold){
+                if(total_dataPtr[index]<score_threshold){
                     continue;
                 }
                 BoxInfo box_info;
                 // box
-                box_info.score = hm_dataPtr[index];
+                box_info.score = total_dataPtr[index];
                 box_info.index = index;
                 box_info.class_name = static_cast<CLASS_NAME>(c);
 
@@ -110,7 +105,7 @@ void CenterNetDetector::GenerateBoxInfo(std::vector<BoxInfo>& top_boxes, float s
         }
         GetTopK(top_boxes_per_classes, mTopK);
         std::copy(top_boxes_per_classes.begin(), top_boxes_per_classes.end(), back_inserter(top_boxes));
-        hm_dataPtr+=spatial_size;
+        total_dataPtr+=spatial_size;
     }
 
     GetTopK(top_boxes, mTopK);

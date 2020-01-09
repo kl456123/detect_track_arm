@@ -30,9 +30,8 @@ struct InstanceInfo{
     cv::Rect box;
 
     int _count;
-
-    // 3 points
     float front_face_points[3][3];
+    bool visible;
 };
 
 
@@ -52,7 +51,7 @@ class InstanceManager{
         void GetInstanceList(std::vector<InstanceInfo>& instances_info){
             instances_info.clear();
             for(auto& iter: mInstancesMap){
-                if(iter.second._count>=mCountThresh){
+                if(iter.second.visible){
                     instances_info.push_back(iter.second);
                 }
             }
@@ -68,13 +67,12 @@ class InstanceManager{
         float mIou2dThresh;
         bool mUsed2d;
         float mTime;
+        float mMinScale;
+        float mMaxScale;
         bool mIgnoreFlyThing;
         std::vector<float> mClipRange;
         int mCountThresh;
-        std::vector<float> mMeanSizes;
-        // allow detector missing it
         std::vector<float> mSoftBoundary;
-        float mMaxScale;
-        float mMinScale;
+        int mInitCount;
 };
 #endif

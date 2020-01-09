@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+
+message Config{
+    string model_name = 3;
+
+    enum MODE{
+        DEBUG=0;
+        RELEASE=1;
+    }
+
+    MODE mode=1 ;
+
+    // instance config
+    InstanceConfig instance_config = 5;
+
+    // model config
+    ModelConfig model_config = 6;
+
+}
+
+
+
+
+
+message InstanceConfig{
+    float camera_height = 1 ;
+    float distance_threshold = 2;
+    bool use_2d=3;
+    repeated float clip_range = 6;
+
+    // Only number larger than count_thresh counts
+    int32 count_thresh = 7;
+    int32 init_count = 8;
+
+
+    // in pixel
+    repeated int32 soft_boundary = 4;
+    // from min to max
+    repeated float scale_range = 5;
+}
+
+
+message ModelConfig{
+    repeated int32 input_size=1;
+    enum MODEL_TYPE{
+        MOBILENET_SSD=0;
+        CENTER_NET=1;
+    }
+    MODEL_TYPE model_type=2;
+
+    repeated string input_names = 4;
+    repeated string output_names = 5;
+
+    enum BackendType{
+        CPU=0;
+        OPENCL =1;
+    }
+
+    BackendType backend_type = 6;
+    float nms_threshold = 7;
+    float score_threshold = 8;
+
+    repeated float mean_vals=9;
+    repeated float mean_std=10;
+
+    int32 threads = 11;
+    int32 precision = 12;
+
+    // only fetch one time
+    repeated bool fetch_once=13;
+}

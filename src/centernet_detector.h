@@ -17,7 +17,7 @@
 
 class CenterNetDetector: public Detector{
     public:
-        CenterNetDetector(std::string& modelName, int width=160, int height=160, float nms_threshold=0.45f, float score_threshold=0.1f);
+        CenterNetDetector(std::string& modelName, int width=160, int height=160, float nms_threshold=0.45f, float score_threshold=0.3f);
 
         virtual void Preprocess(cv::Mat image_in, cv::Mat& image_out);
 

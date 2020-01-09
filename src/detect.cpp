@@ -38,7 +38,7 @@ int main(int argc, char** argv){
 
     std::shared_ptr<Detector> detector;
     std::cout<<model_name<<std::endl;
-    detector.reset(new Detector(model_name));
+    detector.reset(new CenterNetDetector(model_name));
     detector->InitInputAndOutput();
     // auto detector = std::shared_ptr<Detector>(new Detector(model_name));
 #ifdef USE_SDK

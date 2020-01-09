@@ -8,22 +8,21 @@ using namespace std;
 
 int generateInstanceId(){
     static int instance_id=0;
-    std::cout << "------------------------------------------generateInstanceId,id:" << instance_id << std::endl;
     return instance_id++;
 }
 
 InstanceManager::InstanceManager(){
     mCameraHeight = 0.165;
-    // mIntrinsicMatrix<<489.711, 0,  601.698, 0, 489.605, 443.729 ,0,       0,       1;
     mIntrinsicMatrix = Eigen::Matrix<double, 3, 3>::Identity();
     mTranslationMatrix = Eigen::Matrix<double,3,1>::Zero();
     mRotationMatrix = Eigen::Matrix<double, 3,3>::Identity();
-    mDistanceThresh = 5;
+    mDistanceThresh = 2;
     mIou2dThresh = 0.5;
     mUsed2d = false;
 
-    mClipRange = {0.17f, 2.f};
-    mCountThresh = 3;
+    mClipRange = {0.2f, 0.7f};
+    mCountThresh = 5;
+    mInitCount = 5;
     // dont work
     mSoftBoundary = {5, 5};
     mMinScale = 0.03;
@@ -55,7 +54,6 @@ void InstanceManager::GetInstancesInfo(const std::vector<BoxInfo>& box_infos, Im
     double s = 2.0;
     std::vector<int> visible_ids;
     GetVisibleInstanceId(visible_ids);
-    std::cout<<"Visible ids: "<<visible_ids.size()<<std::endl;
     std::vector<int> updated_ids;
     updated_ids.reserve(visible_ids.size());
 
@@ -84,6 +82,7 @@ void InstanceManager::GetInstancesInfo(const std::vector<BoxInfo>& box_infos, Im
             continue;
         }
 
+        //auto new_location = mRotationMatrix * location + mTranslationMatrix;
         Eigen::Matrix<double, 3,3> mRotationMatrix22 = Eigen::Matrix<double, 3,3>::Identity();
         mRotationMatrix22<<1,0,0,0,0,1,0,-1,0;
 
@@ -102,7 +101,8 @@ void InstanceManager::GetInstancesInfo(const std::vector<BoxInfo>& box_infos, Im
         float target_scale = (new_location.col(0)-new_location.col(2)).norm();
         instance_info.scale = std::min(std::max(target_scale, mMinScale), mMaxScale);
         instance_info.box = box_info.box;
-        instance_info._count = 3;
+        instance_info._count = mInitCount;
+        instance_info.visible=false;
 
         bool matched;
         // finally get the instance id
@@ -117,6 +117,8 @@ void InstanceManager::GetInstancesInfo(const std::vector<BoxInfo>& box_infos, Im
         instance_infos.push_back(instance_info);
     }
 
+    //updated_ids
+    // remove useless instance
     for(int i=0;i<visible_ids.size();i++){
         bool flag = true;
         for(int j=0;j<updated_ids.size();j++){
@@ -127,10 +129,10 @@ void InstanceManager::GetInstancesInfo(const std::vector<BoxInfo>& box_infos, Im
         }
         if(flag){
             auto& instance = mInstancesMap[visible_ids[i]];
-            //instance._count--;
-            //if(instance._count==0){
-            mInstancesMap.erase(visible_ids[i]);
-            //}
+            instance._count--;
+            if(instance._count==0){
+                mInstancesMap.erase(visible_ids[i]);
+            }
         }
     }
     std::cout<<"manager size: "<<mInstancesMap.size()<<std::endl;
@@ -141,7 +143,6 @@ void InstanceManager::UpdateInstanceInfo(int instance_id, InstanceInfo& instance
     // update box_2d
     auto& instance = mInstancesMap[instance_id];
     instance.box = instance_info.box;
-    std::cout << "UpdateInstanceInfo" << std::endl;
 
     // update location
     for(int i=0;i<3;i++){
@@ -165,7 +166,10 @@ void InstanceManager::UpdateInstanceInfo(int instance_id, InstanceInfo& instance
             }
         }
     }
-    instance._count+=1;
+    instance._count =std::min(instance._count+1, mCountThresh);
+    if(instance._count>=mCountThresh){
+        instance.visible=true;
+    }
 }
 
 void InstanceManager::GetVisibleInstanceId(std::vector<int>& ids){
@@ -179,9 +183,7 @@ void InstanceManager::GetVisibleInstanceId(std::vector<int>& ids){
         // world 3d coords to image 2d coords
         Eigen::Vector3d world_point_3d(location[0], location[1], location[2]);
         auto camera_point_3d = (mRotationMatrix*mRotationMatrix22).inverse()*(world_point_3d - mTranslationMatrix);
-        std::cout << "---------------------------camera_point_3d,x:" << camera_point_3d[0] << ",y:" << camera_point_3d[1] << ",z:" << camera_point_3d[2] << std::endl;
         auto camera_point_2d_homo = mIntrinsicMatrix*camera_point_3d;
-        std::cout << "---------------------------camera_point_2d_homo,x:" << camera_point_2d_homo[0] << ",y:" << camera_point_2d_homo[1] << ",z:" << camera_point_2d_homo[2] << std::endl;
         float depth = camera_point_2d_homo(2);
         float x = camera_point_2d_homo(0)/depth;
         float y = camera_point_2d_homo(1)/depth;
@@ -192,8 +194,6 @@ void InstanceManager::GetVisibleInstanceId(std::vector<int>& ids){
         float x2 = x*0.5+0.5*instance_info.box.width;
         float y2 = y*0.5;
         bool boundary_cond = x1<=mSoftBoundary[0] || x2>=640-mSoftBoundary[0]||y1<=mSoftBoundary[1]|| y2>=400-mSoftBoundary[1];
-        std::cout<<"camera_point_2d: "<<x1<<" "<<y1<<" "<<x2<<" "<<y2<<"boundary: "<<boundary_cond<<std::endl;
-        std::cout<<"box: "<<instance_info.box.x<<" "<<instance_info.box.y<<std::endl;
         if(depth_cond && !boundary_cond){
             ids.push_back(instance_info.instance_id);
         }
@@ -242,8 +242,6 @@ int InstanceManager::GetInstanceId(const InstanceInfo& target, bool use_2d, bool
         }
 
         // match or insert new instance
-
-        std::cout<<"target.scale: "<<target.scale<<std::endl;
         if(min_dist > mDistanceThresh* target.scale){
             int id = generateInstanceId();
             mInstancesMap.insert(std::make_pair(id,target));
