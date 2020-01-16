@@ -31,7 +31,16 @@ struct InstanceInfo{
 
     int _count;
     float front_face_points[3][3];
+    float rear_face_points[3][3];
     bool visible;
+
+    int class_count=0;
+
+    bool valid;
+
+    // calc from location instead of center of box
+    float cx;
+    float cy;
 };
 
 
@@ -51,7 +60,8 @@ class InstanceManager{
         void GetInstanceList(std::vector<InstanceInfo>& instances_info){
             instances_info.clear();
             for(auto& iter: mInstancesMap){
-                if(iter.second.visible){
+                std::cout<<"instance count: "<<iter.second._count<<std::endl;
+                if(iter.second.valid){
                     instances_info.push_back(iter.second);
                 }
             }
@@ -73,6 +83,7 @@ class InstanceManager{
         std::vector<float> mClipRange;
         int mCountThresh;
         std::vector<float> mSoftBoundary;
-        int mInitCount;
+        float mDistanceThresh2D;
+        float mAmendThresh;
 };
 #endif
