@@ -26,7 +26,7 @@ InstanceManager::InstanceManager(){
     mCountThresh = 3;
     // dont work
     mSoftBoundary = {5, 5};
-    mMinScale = 0.03;
+    mMinScale = 0.05;
     mMaxScale = 0.5;
     mDistanceThresh2D = 0.2;
 
@@ -115,6 +115,8 @@ void InstanceManager::GetInstancesInfo(const std::vector<BoxInfo>& box_infos, Im
         if(depth>mClipRange[1] || depth<mClipRange[0]){
             continue;
         }
+
+        instance_info.depth = depth;
 
         Eigen::Matrix<double, 3,3> mRotationMatrix22 = Eigen::Matrix<double, 3,3>::Identity();
         mRotationMatrix22<<1,0,0,0,0,1,0,-1,0;
@@ -229,9 +231,12 @@ void InstanceManager::UpdateInstanceInfo(int instance_id, InstanceInfo& instance
     float y2 = y1+instance_info.box.height;
     bool boundary_cond = x1<=mSoftBoundary[0] || x2>=640-mSoftBoundary[0]||y1<=mSoftBoundary[1]|| y2>=400-mSoftBoundary[1];
     // update scale
-    if(!boundary_cond){
-        // update location
+    if(!boundary_cond &&instance.depth>instance_info.depth){
+        // update location when it can be visible clearly
+        instance.depth = instance_info.depth;
+        float translate[3];
         for(int i=0;i<3;i++){
+            translate[i] = instance_info.location[i] - instance.location[i];
             instance.location[i] = instance_info.location[i];
         }
         // update scale

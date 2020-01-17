@@ -41,6 +41,9 @@ struct InstanceInfo{
     // calc from location instead of center of box
     float cx;
     float cy;
+
+    // only used for updating location
+    float depth;
 };
 
 
