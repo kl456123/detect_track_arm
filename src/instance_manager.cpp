@@ -13,7 +13,7 @@ int generateInstanceId(){
 }
 
 InstanceManager::InstanceManager(){
-    mCameraHeight = 0.165;
+    mCameraHeight = 0.15;
     // mIntrinsicMatrix<<489.711, 0,  601.698, 0, 489.605, 443.729 ,0,       0,       1;
     mIntrinsicMatrix = Eigen::Matrix<double, 3, 3>::Identity();
     mTranslationMatrix = Eigen::Matrix<double,3,1>::Zero();
@@ -34,6 +34,7 @@ InstanceManager::InstanceManager(){
 }
 
 
+#ifdef USE_SDK
 void InstanceManager::SetupCamera(const CameraCalibrationParameter& camera_param){
     auto k = camera_param._Kl;
     mIntrinsicMatrix<<k[0], k[1],k[2],k[3],k[4],k[5],k[6],k[7],k[8];
@@ -50,11 +51,39 @@ void InstanceManager::SetupPose(const ImrPose& pose){
     Eigen::Quaterniond q(r[0], r[1], r[2], r[3]);
     mRotationMatrix = q.matrix();
 
+
+
+
+}
+#else
+void InstanceManager::SetupCamera(){
+    float k[9] = {4.9008025087775349e+02, 0., 6.5899436439430656e+02, 0.,
+           4.8978248934587106e+02, 4.1209311026514359e+02, 0., 0., 1.};
+    mIntrinsicMatrix<<k[0], k[1],k[2],k[3],k[4],k[5],k[6],k[7],k[8];
+}
+void InstanceManager::SetupPose(){
+    // assgin
+    // T
+    mTranslationMatrix = Eigen::Matrix<double, 3,1>::Zero();
+
+    // R
+    mRotationMatrix = Eigen::Matrix3d::Identity();
 }
 
-void InstanceManager::GetInstancesInfo(const std::vector<BoxInfo>& box_infos, ImrPose& pose, std::vector<InstanceInfo>& instance_infos){
+#endif
+
+
+void InstanceManager::GetInstancesInfo(const std::vector<BoxInfo>& box_infos,
+#ifdef USE_SDK
+        ImrPose& pose,
+#endif
+        std::vector<InstanceInfo>& instance_infos){
     // init matrix param
+#ifdef USE_SDK
     SetupPose(pose);
+#else
+    SetupPose();
+#endif
     double s = 2.0;
     std::vector<int> visible_ids;
     GetVisibleInstanceId(visible_ids);

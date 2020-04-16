@@ -49,13 +49,13 @@ list(APPEND DETECTOR_CPP ${CMAKE_CURRENT_LIST_DIR}/src/detect.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/centernet_detector.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/model.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/common.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/instance_manager.cpp
     )
 
 
 set(DETECTOR_DEPEND MNN)
 if (BUILD_SDK)
     list(APPEND DETECTOR_DEPEND SDK)
-    list(APPEND DETECTOR_CPP ${CMAKE_CURRENT_LIST_DIR}/src/instance_manager.cpp)
 endif()
 
 add_executable(detector ${DETECTOR_CPP})

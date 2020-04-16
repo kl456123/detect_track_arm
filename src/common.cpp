@@ -1,7 +1,5 @@
 #include "common.h"
-#ifdef USE_SDK
 #include "instance_manager.h"
-#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <sstream>
@@ -9,7 +7,6 @@
 static std::vector<std::string> class_names{"bg", "person", "pet_cat", "pet_dog",\
     "sofa", "table", "bed", "excrement", "wire", "key"};
 
-#ifdef USE_SDK
 void drawInstance(const std::vector<InstanceInfo>& instance_infos, cv::Mat& raw_image){
     // visualize bbox
     for (auto& face: instance_infos)
@@ -25,7 +22,7 @@ void drawInstance(const std::vector<InstanceInfo>& instance_infos, cv::Mat& raw_
         auto font = cv::FONT_HERSHEY_SIMPLEX;
         std::stringstream ss;
         ss.precision(3);
-        ss<<class_names[face.class_name]<<" "<<face.instance_id;
+        ss<<class_names[face.class_name]<<" "<<face.front_face_points[0][2];
         auto txt = ss.str();
         int baseline;
         float font_scale=0.5;
@@ -40,7 +37,6 @@ void drawInstance(const std::vector<InstanceInfo>& instance_infos, cv::Mat& raw_
                 font,font_scale, cv::Scalar(0,0,0), thickness, cv::LINE_AA);
     }
 }
-#endif
 
 void drawBoxes(const std::vector<BoxInfo>& finalBoxInfos, cv::Mat& raw_image){
     // visualize bbox

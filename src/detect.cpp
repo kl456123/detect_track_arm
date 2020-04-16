@@ -8,8 +8,9 @@
 
 #include <thread>
 
-#ifdef USE_SDK
 #include "instance_manager.h"
+
+#ifdef USE_SDK
 #include "sdk.h"
 
 #endif
@@ -36,18 +37,27 @@ int main(int argc, char** argv){
         mode = INPUTMODE::VIDEO;
     }
 
+    std::string output_name;
+    if(argc>=5){
+        output_name = argv[4];
+    }else{
+        output_name = "./output.jpg";
+    }
+
     std::shared_ptr<Detector> detector;
     std::cout<<model_name<<std::endl;
-    detector.reset(new CenterNetDetector(model_name));
+    detector.reset(new Detector(model_name));
     detector->InitInputAndOutput();
     // auto detector = std::shared_ptr<Detector>(new Detector(model_name));
-#ifdef USE_SDK
     auto instance_manager = std::shared_ptr<InstanceManager>(new InstanceManager);
+    std::vector<InstanceInfo> instance_infos;
+#ifdef USE_SDK
     auto sdk =  std::shared_ptr<SDK>(new SDK());
     auto camera_param = sdk->GetModuleParams();
     sdk->PrintInfo();
     instance_manager->SetupCamera(camera_param);
-    std::vector<InstanceInfo> instance_infos;
+#else
+    instance_manager->SetupCamera();
 #endif
 
     std::vector<BoxInfo> finalBoxInfos;
@@ -61,19 +71,19 @@ int main(int argc, char** argv){
 
         drawBoxes(finalBoxInfos, raw_image);
 
-        cv::imwrite("./output.jpg", raw_image);
+        cv::imwrite(output_name, raw_image);
     }else if(mode==INPUTMODE::VIDEO){
         // read from video or camera
         // cv::VideoCapture* cap(image_or_video_file);
         auto cap = std::shared_ptr<cv::VideoCapture>(reinterpret_cast<cv::VideoCapture*>(open_video_stream(image_or_video_file, -1, 640, 480, 0)));
         while (true) {
             finalBoxInfos.clear();
+            instance_infos.clear();
 #ifndef USE_SDK
             *(cap.get()) >> raw_image;
             cv::cvtColor(raw_image, raw_image, CV_BGR2GRAY);
             cv::cvtColor(raw_image, raw_image, CV_GRAY2BGR);
 #else
-            instance_infos.clear();
             raw_image = sdk->ReadImage();
             cv::cvtColor(raw_image, raw_image, CV_GRAY2BGR);
             auto pose = sdk->GetPose();
@@ -86,17 +96,19 @@ int main(int argc, char** argv){
             // manage detection result
 #ifdef USE_SDK
             instance_manager->GetInstancesInfo(finalBoxInfos, pose, instance_infos);
+#else
+            instance_manager->GetInstancesInfo(finalBoxInfos, instance_infos);
 #endif
 
             std::chrono::time_point<std::chrono::system_clock> t2 = std::chrono::system_clock::now();
             float dur = (float)std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count() / 1000;
             std::cout << "duration time:" << dur << "ms" << std::endl;
 
-#ifndef USE_SDK
+            // #ifndef USE_SDK
             drawBoxes(finalBoxInfos, raw_image);
-#else
-            drawInstance(instance_infos, raw_image);
-#endif
+            // #else
+            // drawInstance(instance_infos, raw_image);
+            // #endif
             cv::namedWindow("MNN", CV_WINDOW_NORMAL);
             cv::imshow("MNN", raw_image);
             cv::waitKey(1);

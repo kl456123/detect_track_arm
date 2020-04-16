@@ -8,7 +8,9 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 
+#ifdef USE_SDK
 #include "imrdata.h"
+#endif
 
 struct InstanceInfo{
     // class
@@ -54,10 +56,17 @@ class InstanceManager{
         virtual ~InstanceManager(){};
 
         int GetInstanceId(const InstanceInfo& target, bool, bool&);
+#ifdef USE_SDK
         void SetupPose(const ImrPose& );
-        void GetInstancesInfo(const std::vector<BoxInfo>& box_infos,ImrPose& pose, std::vector<InstanceInfo>& instance_infos);
-        void UpdateInstanceInfo(int instance_id, InstanceInfo& instance_info);
         void SetupCamera(const CameraCalibrationParameter&);
+void GetInstancesInfo(const std::vector<BoxInfo>& box_infos,ImrPose& pose, std::vector<InstanceInfo>& instance_infos);
+#else
+        void SetupPose();
+        void SetupCamera();
+void GetInstancesInfo(const std::vector<BoxInfo>& box_infos,std::vector<InstanceInfo>& instance_infos);
+#endif
+
+        void UpdateInstanceInfo(int instance_id, InstanceInfo& instance_info);
         void GetVisibleInstanceId(std::vector<int>& ids);
 
         void GetInstanceList(std::vector<InstanceInfo>& instances_info){

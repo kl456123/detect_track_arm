@@ -46,10 +46,8 @@ struct BoxInfo {
 
 void drawBoxes(const std::vector<BoxInfo>& finalBoxInfos, cv::Mat& raw_image);
 
-#ifdef USE_SDK
 struct InstanceInfo;
 void drawInstance(const std::vector<InstanceInfo>&, cv::Mat& raw_image);
-#endif
 void *open_video_stream(const std::string& f, int c, int w, int h, int fps);
 void loadOpenCLLib();
 float iou(cv::Rect box0, cv::Rect box1);
