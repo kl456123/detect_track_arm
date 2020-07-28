@@ -44,7 +44,7 @@ set_target_properties(
 
 # add_executable(test ${TEST_COMPILE_CODE})
 set(DETECTOR_CPP)
-list(APPEND DETECTOR_CPP ${CMAKE_CURRENT_LIST_DIR}/src/detect.cpp
+list(APPEND DETECTOR_CPP 
     ${CMAKE_CURRENT_LIST_DIR}/src/detector.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/centernet_detector.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/model.cpp
@@ -58,8 +58,14 @@ if (BUILD_SDK)
     list(APPEND DETECTOR_DEPEND SDK)
 endif()
 
-add_executable(detector ${DETECTOR_CPP})
+add_executable(detector ${DETECTOR_CPP} ${CMAKE_CURRENT_LIST_DIR}/src/detect.cpp)
 target_link_libraries(detector
+    ${DETECTOR_DEPEND}
+    ${OpenCV_LIBS} -ldl
+    )
+
+add_executable(test_detector ${DETECTOR_CPP} ${CMAKE_CURRENT_LIST_DIR}/src/main.cpp)
+target_link_libraries(test_detector
     ${DETECTOR_DEPEND}
     ${OpenCV_LIBS} -ldl
     )

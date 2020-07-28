@@ -18,8 +18,7 @@ void CenterNetDetector::PrepareInputAndOutputNames(){
 void CenterNetDetector::Preprocess(const cv::Mat raw_image, cv::Mat& image){
     image = raw_image;
 
-    mOriginInputSize.push_back(raw_image.rows);
-    mOriginInputSize.push_back(raw_image.cols);
+    mOriginInputSize = {raw_image.rows, raw_image.cols};
     cv::Mat inp_image = cv::Mat::zeros(mInputSize[0], mInputSize[1], image.type());
 
     cv::resize(image, inp_image, cv::Size(mInputSize[1], mInputSize[0]));

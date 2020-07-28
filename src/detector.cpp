@@ -30,6 +30,7 @@ void Detector::PrepareInputAndOutputNames(){
 
 void Detector::Preprocess(const cv::Mat& raw_image, cv::Mat& image){
     cv::cvtColor(raw_image,image, cv::COLOR_BGR2RGB);
+    mOriginInputSize.clear();
 
     mOriginInputSize.push_back(raw_image.rows);
     mOriginInputSize.push_back(raw_image.cols);

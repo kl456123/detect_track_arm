@@ -4,8 +4,7 @@
 #include <stdio.h>
 #include <sstream>
 
-static std::vector<std::string> class_names{"bg", "person", "pet_cat", "pet_dog",\
-    "sofa", "table", "bed", "excrement", "wire", "key"};
+static std::vector<std::string> class_names{"bg", "wire", "shoes", "power-strip", "weighing-scale", "chair"};
 
 void drawInstance(const std::vector<InstanceInfo>& instance_infos, cv::Mat& raw_image){
     // visualize bbox
