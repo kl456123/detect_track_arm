@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.2.0)
 
 find_package(OpenCL REQUIRED)
+find_package(glog REQUIRED)
 
 include_directories(${OpenCL_INCLUDE_DIRS})
 include_directories(${CMAKE_CURRENT_LIST_DIR})
@@ -11,4 +12,4 @@ foreach(file_path ${SRC_FILES})
 endforeach()
 
 add_executable(ocl_driver_test ${SRC_FILE_PATHS})
-target_link_libraries(ocl_driver_test ${OpenCL_LIBRARIES})
+target_link_libraries(ocl_driver_test ${OpenCL_LIBRARIES} glog::glog)

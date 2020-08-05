@@ -1,9 +1,11 @@
 #include "opencl/ocl_driver.h"
 #include <iostream>
+#include <glog/logging.h>
 
 using namespace opencl;
 
-int main(){
+int main(int argc, char* argv[]){
+    google::InitGoogleLogging(argv[0]);
     // init platform and all devices
     OCLDriver::Init();
 
@@ -27,20 +29,25 @@ int main(){
     OCLDriver::SynchronousMemcpyH2D(ctx, GpuDevicePtr(b_ptr), b, bytes);
 
     // prepare kernel
-    const char* src_code = "";
-    const char* kernel_name = "vec_add";
+    std::string fname = "../opencl/cl/vec_add.cl";
+    const char* kernel_name = "vector_add";
     GpuFunctionHandle kernel;
     GpuModuleHandle program=0;
-    status = OCLDriver::LoadPtx(ctx, src_code, &program);
+    if(OCLDriver::LoadPtx(ctx, fname, &program)!=CL_SUCCESS){
+        LOG(FATAL)<<"Create Program Failed: "<<fname;
+        return -1;
+    }
 
     if(!OCLDriver::GetModuleFunction(ctx, program,
                 kernel_name, &kernel)){
+        LOG(FATAL)<<"Create Kernel Failed: "<<kernel_name;
         return -1;
     }
 
     // compute stream
     GpuStreamHandle stream;
     if(!OCLDriver::CreateStream(ctx, &stream)){
+        LOG(FATAL)<<"Create Stream Failed: ";
         return -1;
     }
 
@@ -52,10 +59,22 @@ int main(){
     OCLDriver::LaunchKernel(ctx, kernel, num, 1,1/*gws*/,   1, 1, 1/*lws*/,
             0, stream, NULL, NULL);
 
-    OCLDriver::SynchronousMemcpyD2H(ctx, c, GpuDevicePtr(c_ptr), bytes);
+    if(OCLDriver::SynchronousMemcpyD2H(ctx, c,
+                GpuDevicePtr(c_ptr), bytes)!=CL_SUCCESS){
+        LOG(FATAL)<<"Copy From Device To Host Failed";
+        return -1;
+    }
+
+    OCLDriver::SynchronizeStream(ctx, stream);
 
     // print computed result
     for(int i=0; i<num; ++i){
-        std::cout<<c[i]<<std::endl;
+        DLOG(INFO)<<c[i];
     }
+
+    // clean
+    OCLDriver::DestroyStream(ctx, stream);
+    OCLDriver::DestroyContext(ctx);
+
+    google::ShutdownGoogleLogging();
 }

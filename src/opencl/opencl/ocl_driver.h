@@ -46,7 +46,7 @@ namespace opencl{
             // stream is owned by the caller, must not be null, and *stream is set to null
             // if the stream is successfully destroyed.
             // http://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__STREAM.html#group__CUDA__STREAM_1g244c8833de4596bcd31a06cdf21ee758
-            static void DestroyStream(const GpuContext& context, GpuStreamHandle* stream);
+            static void DestroyStream(const GpuContext& context, const GpuStreamHandle& stream);
 
             // Given a device ordinal, returns a device handle into the device outparam,
             // which must not be null.
@@ -94,19 +94,19 @@ namespace opencl{
             // amount of time?
             //
             // http://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__STREAM.html#group__CUDA__STREAM_1g15e49dd91ec15991eb7c0a741beb7dad
-            static Status SynchronizeStream(GpuContext* context,
-                    GpuStreamHandle stream);
+            static Status SynchronizeStream(const GpuContext& context,
+                    const GpuStreamHandle& stream);
 
             // Blocks the calling thread until the operations associated with the context
             // have been completed, via cuCtxSynchronize.
             //
             // http://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__CTX.html#group__CUDA__CTX_1g7a54725f28d34b8c6299f0c6ca579616
-            static bool SynchronizeContext(GpuContext* context);
+            static bool SynchronizeContext(const GpuContext& context);
 
             // Returns true if all stream tasks have completed at time of the call. Note
             // the potential for races around this call (if another thread adds work to
             // the stream immediately after this returns).
-            static bool IsStreamIdle(GpuContext* context, GpuStreamHandle stream);
+            static bool IsStreamIdle(const GpuContext& context, GpuStreamHandle stream);
 
             // Launches a CUDA kernel via cuLaunchKernel.
             // TODO(leary) describe the structure of kernel_params and extra in a readable

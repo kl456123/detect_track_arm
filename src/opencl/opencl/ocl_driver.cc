@@ -1,6 +1,6 @@
-#include <assert.h>
 #include <fstream>
 #include <vector>
+#include <glog/logging.h>
 
 #include "opencl/ocl_driver.h"
 
@@ -22,18 +22,22 @@ namespace opencl{
             GpuStatus status = clGetPlatformIDs(0, NULL, &num_platforms);
             GpuPlatform platforms_list[num_platforms];
             clGetPlatformIDs(num_platforms, platforms_list, NULL);
-            assert(platforms.size()>0);
 
             // copy to platforms
             platforms.reserve(num_platforms);
             platforms.assign(platforms_list, platforms_list+num_platforms);
+            CHECK_GT(platforms.size(), 0);
 
             // get all devices
             clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_ALL, 0, NULL, &num_devices);
             GpuDeviceHandle devices_list[num_devices];
             clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_ALL, num_devices, devices_list, NULL);
 
-            assert(devices.size()>0);
+            // copy to devices
+            devices.reserve(num_devices);
+            devices.assign(devices_list, devices_list + num_devices);
+
+            CHECK_GT(devices.size(), 0);
             initialized = true;
             return CL_SUCCESS;
         }
@@ -53,7 +57,7 @@ namespace opencl{
     }
 
     Status OCLDriver::CreateContext(int device_ordinal, GpuContext* context){
-        assert(devices.size()<device_ordinal);
+        CHECK_GT(devices.size(), device_ordinal);
         return CreateContext(devices[device_ordinal], context);
     }
 
@@ -125,6 +129,7 @@ namespace opencl{
             GpuDevicePtr gpu_src, uint64 size){
         GpuStreamHandle default_stream=0;
         auto ret = GetDefaultStream(context, &default_stream);
+        CHECK_EQ(ret, CL_SUCCESS)<<"Create Default Stream Failed";
         GpuStatus status = clEnqueueReadBuffer(default_stream, gpu_src, CL_TRUE, 0, size, host_dst,
                 0/*num of wait events*/, NULL/*wait events*/, NULL/*event*/);
         return status;
@@ -199,9 +204,8 @@ namespace opencl{
     /*static*/ Status OCLDriver::LoadPtx(const GpuContext& context, const std::string& fname,
             GpuModuleHandle* module){
         std::ifstream source_file(std::string(fname.data(), fname.size()));
-        if(source_file.fail()){
-            return CL_INVALID_PROGRAM;
-        }
+        CHECK(!source_file.fail())<<"fname: "<<fname<<" Not Found!";
+
         std::string source_code(
                 std::istreambuf_iterator<char>(source_file),
                 (std::istreambuf_iterator<char>()));
@@ -212,9 +216,11 @@ namespace opencl{
         // Create a program from the kernel source
         GpuModuleHandle program = clCreateProgramWithSource(context, 1,
                 &c_str, &str_size, &ret);
+        CHECK_EQ(ret, CL_SUCCESS)<<"Create Program Failed";
 
         // Build the program
         ret = clBuildProgram(program, 1, &devices[0], NULL, NULL, NULL);
+        CHECK_EQ(ret, CL_SUCCESS)<<"Build Program Failed";
 
         *module = program;
         return CL_SUCCESS;
@@ -225,7 +231,7 @@ namespace opencl{
         if(clRetainContext(context)!=CL_SUCCESS){
             return false;
         }
-        assert(module != nullptr && kernel_name != nullptr);
+        CHECK(module != nullptr && kernel_name != nullptr);
         // CHECK(module != nullptr && kernel_name != nullptr);
         GpuStatus status;
         GpuFunctionHandle kernel = clCreateKernel(module, kernel_name, &status);
@@ -233,7 +239,22 @@ namespace opencl{
             return false;
         }
 
+        // set output
+        *function = kernel;
+
         return true;
+    }
+
+    /* static */ Status OCLDriver::SynchronizeStream(const GpuContext& context,
+            const GpuStreamHandle& stream) {
+        CHECK(clRetainContext(context)!=CL_SUCCESS);
+        clFlush(stream);
+        clFinish(stream);
+    }
+
+    /*static*/ void OCLDriver::DestroyStream(const GpuContext& context,
+            const GpuStreamHandle& stream){
+        clReleaseCommandQueue(stream);
     }
 
 }// namespace opencl
