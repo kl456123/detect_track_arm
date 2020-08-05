@@ -7,6 +7,7 @@
 #else
 #include <CL/cl.h>
 #endif
+#include <string>
 
 namespace opencl{
     // opencl types
@@ -22,6 +23,9 @@ namespace opencl{
 
     // common types
     using Status=bool;
+    using string=std::string;
+    using uint64=uint64_t;
+    using int64=int64_t;
 }// namespace
 
 
