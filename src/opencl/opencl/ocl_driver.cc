@@ -247,7 +247,7 @@ namespace opencl{
 
     /* static */ Status OCLDriver::SynchronizeStream(const GpuContext& context,
             const GpuStreamHandle& stream) {
-        CHECK(clRetainContext(context)!=CL_SUCCESS);
+        CHECK_EQ(clRetainContext(context), CL_SUCCESS);
         clFlush(stream);
         clFinish(stream);
     }

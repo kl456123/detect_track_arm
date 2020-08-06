@@ -1,6 +1,7 @@
 #include "opencl/ocl_driver.h"
 #include <iostream>
 #include <glog/logging.h>
+#include "opencl/gpu_kernel_helper.h"
 
 using namespace opencl;
 
@@ -20,9 +21,9 @@ int main(int argc, char* argv[]){
     dtype* b = (dtype*)malloc(bytes);
     dtype* c = (dtype*)malloc(bytes);
 
-    auto a_ptr = OCLDriver::DeviceAllocate(ctx, num);
-    auto b_ptr = OCLDriver::DeviceAllocate(ctx, num);
-    auto c_ptr = OCLDriver::DeviceAllocate(ctx, num);
+    auto a_ptr = OCLDriver::DeviceAllocate(ctx, bytes);
+    auto b_ptr = OCLDriver::DeviceAllocate(ctx, bytes);
+    auto c_ptr = OCLDriver::DeviceAllocate(ctx, bytes);
 
     // copy host to device
     OCLDriver::SynchronousMemcpyH2D(ctx, GpuDevicePtr(a_ptr), a, bytes);
@@ -51,10 +52,7 @@ int main(int argc, char* argv[]){
         return -1;
     }
 
-    // Set the arguments of the kernel
-    status = clSetKernelArg(kernel, 0, sizeof(GpuDevicePtr), (void *)&a_ptr);
-    status = clSetKernelArg(kernel, 1, sizeof(GpuDevicePtr), (void *)&b_ptr);
-    status = clSetKernelArg(kernel, 2, sizeof(GpuDevicePtr), (void *)&c_ptr);
+    GpuSetKernel(kernel, GpuDevicePtr(a_ptr), GpuDevicePtr(b_ptr), GpuDevicePtr(c_ptr));
 
     OCLDriver::LaunchKernel(ctx, kernel, num, 1,1/*gws*/,   1, 1, 1/*lws*/,
             0, stream, NULL, NULL);
