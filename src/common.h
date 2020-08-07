@@ -40,6 +40,7 @@ struct BoxInfo {
 
     // used for record its position
     int index;
+    float depth=-1;
 };
 
 

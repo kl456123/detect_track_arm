@@ -10,14 +10,16 @@
 #include <opencv2/opencv.hpp>
 #include "detector.h"
 #include "common.h"
+#include "opencl/gpu_types.h"
 
 #include <chrono>
 
-
+using namespace opencl;
 
 class CenterNetDetector: public Detector{
     public:
         CenterNetDetector(std::string& modelName, int width=160, int height=160, float nms_threshold=0.45f, float score_threshold=0.3f);
+        virtual ~CenterNetDetector();
 
         virtual void Preprocess(cv::Mat image_in, cv::Mat& image_out);
 
@@ -25,6 +27,9 @@ class CenterNetDetector: public Detector{
         virtual void Detect(const cv::Mat& raw_image, std::vector<BoxInfo>& finalBoxInfos);
 
         virtual void PrepareInputAndOutputNames()override;
+    private:
+
+        DeviceContext* device_context_;
 };
 
 

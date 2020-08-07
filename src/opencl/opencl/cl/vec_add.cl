@@ -5,4 +5,5 @@ __kernel void vector_add(__global float *A, __global float *B, __global float *C
 
     // Do the operation
     C[i] = A[i] + B[i];
+    C[i] = 1.0;
 }

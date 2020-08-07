@@ -1,12 +1,38 @@
 #include "centernet_detector.h"
 #include <iterator>
-// #include <opencv2/imgcodecs.hpp>
-// #include <opencv2/highgui.hpp>
-// #include <opencv2/imgproc.hpp>
+#include "opencl/functors.h"
+#include "opencl/ocl_driver.h"
+#include <glog/logging.h>
 
 
 CenterNetDetector::CenterNetDetector(std::string& modelName, int width, int height, float nms_threshold,
         float score_threshold):Detector(modelName, width, height, nms_threshold, score_threshold){
+    // init opencl device and context
+
+    // can run multiple times
+    OCLDriver::Init();
+
+    // create context
+    GpuStatus status;
+    GpuContext ctx;
+    status = OCLDriver::CreateContext(0, &ctx);
+    CHECK_EQ(status, CL_SUCCESS);
+
+    // create compute stream
+    GpuStreamHandle stream;
+    if(!OCLDriver::CreateStream(ctx, &stream)){
+        LOG(FATAL)<<"Create Stream Failed: ";
+    }
+
+    device_context_ = new DeviceContext;
+    device_context_->context = ctx;
+    device_context_->stream = stream;
+}
+CenterNetDetector::~CenterNetDetector(){
+    // clean opencl
+    OCLDriver::DestroyStream(device_context_->context,
+            device_context_->stream);
+    delete device_context_;
 }
 
 void CenterNetDetector::PrepareInputAndOutputNames(){
@@ -65,6 +91,10 @@ void CenterNetDetector::GenerateBoxInfo(std::vector<BoxInfo>& top_boxes, float s
     int spatial_size = spatial_dims[2]* spatial_dims[3];
     auto reg_dataPtr = total_dataPtr+mNumOfClasses*spatial_size;
     auto wh_dataPtr =  total_dataPtr+(mNumOfClasses+2)*spatial_size;
+
+    float* res_maxpool = new float[mNumOfClasses*spatial_size];
+    opencl::functor::MaxPool2D()(device_context_, total_dataPtr, res_maxpool,
+            {mNumOfClasses, spatial_dims[2], spatial_dims[3]}, 3/*kernel*/, 1/*stride*/);
 
     for(int c=0;c<mNumOfClasses;c++){
         std::vector<BoxInfo> top_boxes_per_classes;

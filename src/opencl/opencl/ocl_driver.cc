@@ -41,6 +41,26 @@ namespace opencl{
             initialized = true;
             return CL_SUCCESS;
         }
+
+        // get program build info
+        string GetProgramBuildInfo(const GpuModuleHandle& program){
+            // char *buff_erro;
+            GpuStatus errcode;
+            size_t build_log_len;
+            errcode = clGetProgramBuildInfo(program, devices[0], CL_PROGRAM_BUILD_LOG, 0, NULL, &build_log_len);
+            CHECK_EQ(errcode, CL_SUCCESS)<<"clGetProgramBuildInfo failed";
+
+            char buff_erro[build_log_len];
+
+            errcode = clGetProgramBuildInfo(program, devices[0], CL_PROGRAM_BUILD_LOG, build_log_len, buff_erro, NULL);
+            CHECK_EQ(errcode, CL_SUCCESS)<<"clGetProgramBuildInfo failed";
+
+            return string(buff_erro);
+        }
+
+        // get kernel build info
+        string GetKernelBuildInfo(){
+        }
     }// namespace
 
     GpuStreamHandle OCLDriver::default_stream_;
@@ -220,7 +240,7 @@ namespace opencl{
 
         // Build the program
         ret = clBuildProgram(program, 1, &devices[0], NULL, NULL, NULL);
-        CHECK_EQ(ret, CL_SUCCESS)<<"Build Program Failed";
+        CHECK_EQ(ret, CL_SUCCESS)<<"Build Program Failed, build log: "<<GetProgramBuildInfo(program);
 
         *module = program;
         return CL_SUCCESS;

@@ -4,7 +4,8 @@
 #include <stdio.h>
 #include <sstream>
 
-static std::vector<std::string> class_names{"bg", "wire", "shoes", "power-strip", "weighing-scale", "chair"};
+// static std::vector<std::string> class_names{"bg", "wire", "shoes", "power-strip", "weighing-scale", "chair"};
+ static std::vector<std::string> class_names{"person", "pet-cat", "pet-dog", "sofa", "table", "bed", "excrement", "wire", "key"};
 
 void drawInstance(const std::vector<InstanceInfo>& instance_infos, cv::Mat& raw_image){
     // visualize bbox
@@ -52,7 +53,7 @@ void drawBoxes(const std::vector<BoxInfo>& finalBoxInfos, cv::Mat& raw_image){
         auto font = cv::FONT_HERSHEY_SIMPLEX;
         std::stringstream ss;
         ss.precision(3);
-        ss<<class_names[face.class_name]<<" "<<face.score;
+        ss<<class_names[face.class_name]<<" "<<face.score<<" "<<face.depth;
         auto txt = ss.str();
         int baseline;
         float font_scale = 0.5;
@@ -82,7 +83,7 @@ void *open_video_stream(const std::string& f, int c, int w, int h, int fps)
 }
 
 void loadOpenCLLib(){
-    auto handle = dlopen("/usr/local/lib/libMNN_CL.so", RTLD_NOW);
+    auto handle = dlopen("/home/indemind/Documents/Project/MNN/lib/libMNN_CL.so", RTLD_NOW);
     FUNC_PRINT_ALL(handle, p);
 }
 

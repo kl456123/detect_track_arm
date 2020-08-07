@@ -46,7 +46,7 @@ int main(int argc, char** argv){
 
     std::shared_ptr<Detector> detector;
     std::cout<<model_name<<std::endl;
-    detector.reset(new Detector(model_name));
+    detector.reset(new CenterNetDetector(model_name, 320, 320, 0.45, 0.3));
     detector->InitInputAndOutput();
     // auto detector = std::shared_ptr<Detector>(new Detector(model_name));
     auto instance_manager = std::shared_ptr<InstanceManager>(new InstanceManager);

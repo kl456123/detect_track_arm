@@ -70,7 +70,7 @@ int main(int argc, char** argv){
 
     std::shared_ptr<Detector> detector;
     std::cout<<model_name<<std::endl;
-    detector.reset(new Detector(model_name));
+    detector.reset(new CenterNetDetector(model_name, 320, 320, 0.3));
     detector->InitInputAndOutput();
     // auto detector = std::shared_ptr<Detector>(new Detector(model_name));
     auto instance_manager = std::shared_ptr<InstanceManager>(new InstanceManager);
@@ -103,7 +103,7 @@ int main(int argc, char** argv){
         std::string images_dir = image_or_video_file;
         std::vector<std::string> image_name_list;
         ReadFilesFromDir(images_dir, &image_name_list);
-        image_name_list.insert(image_name_list.begin(), image_name_list[1]);
+        // image_name_list.insert(image_name_list.begin(), image_name_list[1]);
         for(auto& image_name: image_name_list){
             auto image_path = images_dir+"/"+image_name;
             raw_image = cv::imread(image_path);
@@ -119,14 +119,13 @@ int main(int argc, char** argv){
             // from single channel to 3 channels
             std::chrono::time_point<std::chrono::system_clock> t1 = std::chrono::system_clock::now();
             // first detect
-            detector->WaitFinish();
             detector->Detect(raw_image, finalBoxInfos);
             detector->WaitFinish();
             // manage detection result
 // #ifdef USE_SDK
             // instance_manager->GetInstancesInfo(finalBoxInfos, pose, instance_infos);
 // #else
-            // instance_manager->GetInstancesInfo(finalBoxInfos, instance_infos);
+            instance_manager->GetInstancesInfo(finalBoxInfos, instance_infos);
 // #endif
 
             std::chrono::time_point<std::chrono::system_clock> t2 = std::chrono::system_clock::now();

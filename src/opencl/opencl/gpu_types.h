@@ -21,6 +21,11 @@ namespace opencl{
     using GpuStatus = cl_int;
     using GpuPlatform=cl_platform_id;
 
+    struct DeviceContext{
+        GpuStreamHandle stream;
+        GpuContext context;
+    };
+
     // common types
     using Status=bool;
     using string=std::string;

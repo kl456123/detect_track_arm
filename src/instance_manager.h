@@ -63,7 +63,7 @@ void GetInstancesInfo(const std::vector<BoxInfo>& box_infos,ImrPose& pose, std::
 #else
         void SetupPose();
         void SetupCamera();
-void GetInstancesInfo(const std::vector<BoxInfo>& box_infos,std::vector<InstanceInfo>& instance_infos);
+void GetInstancesInfo(std::vector<BoxInfo>& box_infos,std::vector<InstanceInfo>& instance_infos);
 #endif
 
         void UpdateInstanceInfo(int instance_id, InstanceInfo& instance_info);

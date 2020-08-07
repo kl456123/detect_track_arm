@@ -2,11 +2,15 @@
 #include <iostream>
 #include <glog/logging.h>
 #include "opencl/gpu_kernel_helper.h"
+#include "opencl/functors.h"
 
 using namespace opencl;
 
 int main(int argc, char* argv[]){
+    FLAGS_log_dir = "./log.txt";
     google::InitGoogleLogging(argv[0]);
+    FLAGS_logtostderr=1;
+    FLAGS_minloglevel=0;
     // init platform and all devices
     OCLDriver::Init();
 

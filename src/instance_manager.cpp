@@ -13,7 +13,7 @@ int generateInstanceId(){
 }
 
 InstanceManager::InstanceManager(){
-    mCameraHeight = 0.15;
+    mCameraHeight = 1.0;
     // mIntrinsicMatrix<<489.711, 0,  601.698, 0, 489.605, 443.729 ,0,       0,       1;
     mIntrinsicMatrix = Eigen::Matrix<double, 3, 3>::Identity();
     mTranslationMatrix = Eigen::Matrix<double,3,1>::Zero();
@@ -22,7 +22,7 @@ InstanceManager::InstanceManager(){
     mIou2dThresh = 0.5;
     mUsed2d = false;
 
-    mClipRange = {0.17f, 0.7f};
+    mClipRange = {0.17f, 10.f};
     mCountThresh = 3;
     // dont work
     mSoftBoundary = {5, 5};
@@ -57,8 +57,9 @@ void InstanceManager::SetupPose(const ImrPose& pose){
 }
 #else
 void InstanceManager::SetupCamera(){
-    float k[9] = {4.9008025087775349e+02, 0., 6.5899436439430656e+02, 0.,
-           4.8978248934587106e+02, 4.1209311026514359e+02, 0., 0., 1.};
+    // float k[9] = {4.9008025087775349e+02, 0., 6.5899436439430656e+02, 0.,
+           // 4.8978248934587106e+02, 4.1209311026514359e+02, 0., 0., 1.};
+    float k[9] = {246.227, 0, 326.405, 0, 246.293, 202.522, 0, 0,1};
     mIntrinsicMatrix<<k[0], k[1],k[2],k[3],k[4],k[5],k[6],k[7],k[8];
 }
 void InstanceManager::SetupPose(){
@@ -73,7 +74,7 @@ void InstanceManager::SetupPose(){
 #endif
 
 
-void InstanceManager::GetInstancesInfo(const std::vector<BoxInfo>& box_infos,
+void InstanceManager::GetInstancesInfo(std::vector<BoxInfo>& box_infos,
 #ifdef USE_SDK
         ImrPose& pose,
 #endif
@@ -84,7 +85,7 @@ void InstanceManager::GetInstancesInfo(const std::vector<BoxInfo>& box_infos,
 #else
     SetupPose();
 #endif
-    double s = 2.0;
+    double s = 1.0;
     std::vector<int> visible_ids;
     GetVisibleInstanceId(visible_ids);
     std::cout<<"Visible ids: "<<visible_ids.size()<<std::endl;
@@ -144,8 +145,11 @@ void InstanceManager::GetInstancesInfo(const std::vector<BoxInfo>& box_infos,
         if(depth>mClipRange[1] || depth<mClipRange[0]){
             continue;
         }
+        float tmp_y = location(2, 1);
+        float tmp_x = location(0, 1);
 
         instance_info.depth = depth;
+        box_info.depth = std::sqrt(tmp_x*tmp_x+tmp_y*tmp_y);
 
         Eigen::Matrix<double, 3,3> mRotationMatrix22 = Eigen::Matrix<double, 3,3>::Identity();
         mRotationMatrix22<<1,0,0,0,0,1,0,-1,0;
