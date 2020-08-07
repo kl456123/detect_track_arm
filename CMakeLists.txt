@@ -11,6 +11,7 @@ option(BUILD_TRACKER "Build tracker" OFF)
 #opencv
 find_package(OpenCV REQUIRED)
 find_package(Eigen3 REQUIRED NO_MODULE)
+find_package(glog REQUIRED)
 
 include_directories(${EIGEN3_INCLUDE_DIRS})
 
@@ -19,6 +20,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 #4.mnn include
 include_directories(${CMAKE_CURRENT_LIST_DIR}/MNN/include)
+
+#5. opencl driver wrapper headers
+include_directories(${CMAKE_CURRENT_LIST_DIR}/src/opencl/)
 
 link_directories(${CMAKE_CURRENT_LIST_DIR}/MNN/lib)
 
@@ -43,8 +47,12 @@ set_target_properties(
 
 
 # add_executable(test ${TEST_COMPILE_CODE})
+
+
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/src/opencl)
+
 set(DETECTOR_CPP)
-list(APPEND DETECTOR_CPP 
+list(APPEND DETECTOR_CPP
     ${CMAKE_CURRENT_LIST_DIR}/src/detector.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/centernet_detector.cpp
     ${CMAKE_CURRENT_LIST_DIR}/src/model.cpp
@@ -62,12 +70,14 @@ add_executable(detector ${DETECTOR_CPP} ${CMAKE_CURRENT_LIST_DIR}/src/detect.cpp
 target_link_libraries(detector
     ${DETECTOR_DEPEND}
     ${OpenCV_LIBS} -ldl
+    ocl_driver
     )
 
 add_executable(test_detector ${DETECTOR_CPP} ${CMAKE_CURRENT_LIST_DIR}/src/main.cpp)
 target_link_libraries(test_detector
     ${DETECTOR_DEPEND}
     ${OpenCV_LIBS} -ldl
+    ocl_driver
     )
 
 if(BUILD_TRACKER)
