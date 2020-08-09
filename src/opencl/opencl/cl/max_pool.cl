@@ -1,4 +1,4 @@
-__kernel void max_pool_2d(__global float* input_image,
+__kernel void max_pool_2d(__global float* input_image/*(num_classes, height, width)*/,
         __global bool* output_image,
         int kernel_size,
         int stride_size,
