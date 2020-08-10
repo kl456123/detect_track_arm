@@ -30,6 +30,8 @@ class CenterNetDetector: public Detector{
     private:
 
         DeviceContext* device_context_;
+
+        bool* res_maxpool_=nullptr;
 };
 
 

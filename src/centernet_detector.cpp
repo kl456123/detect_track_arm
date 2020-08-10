@@ -13,26 +13,26 @@ CenterNetDetector::CenterNetDetector(std::string& modelName, int width, int heig
     OCLDriver::Init();
 
     // create context
-    GpuStatus status;
     GpuContext ctx;
-    status = OCLDriver::CreateContext(0, &ctx);
-    CHECK_EQ(status, CL_SUCCESS);
+    CHECK(OCLDriver::CreateContext(0, &ctx))
+        <<"Create Context Failed";
 
     // create compute stream
     GpuStreamHandle stream;
-    if(!OCLDriver::CreateStream(ctx, &stream)){
-        LOG(FATAL)<<"Create Stream Failed: ";
-    }
+    CHECK(OCLDriver::CreateStream(ctx, &stream))
+        <<"Create Stream Failed";
 
     device_context_ = new DeviceContext;
     device_context_->context = ctx;
     device_context_->stream = stream;
+
 }
 CenterNetDetector::~CenterNetDetector(){
     // clean opencl
     OCLDriver::DestroyStream(device_context_->context,
             device_context_->stream);
     delete device_context_;
+    delete[] res_maxpool_;
 }
 
 void CenterNetDetector::PrepareInputAndOutputNames(){
@@ -92,35 +92,39 @@ void CenterNetDetector::GenerateBoxInfo(std::vector<BoxInfo>& top_boxes, float s
     auto reg_dataPtr = total_dataPtr+mNumOfClasses*spatial_size;
     auto wh_dataPtr =  total_dataPtr+(mNumOfClasses+2)*spatial_size;
 
-    float* res_maxpool = new float[mNumOfClasses*spatial_size];
-    opencl::functor::MaxPool2D()(device_context_, total_dataPtr, res_maxpool,
-            {mNumOfClasses, spatial_dims[2], spatial_dims[3]}, 3/*kernel*/, 1/*stride*/);
+    std::vector<int> input_shape = {mNumOfClasses, spatial_dims[2], spatial_dims[3]};
+    std::vector<int> output_shape = input_shape;
+    if(!res_maxpool_){
+        res_maxpool_ = new bool[mNumOfClasses*spatial_size];
+    }
+    opencl::functor::MaxPool2D()(device_context_, total_dataPtr, res_maxpool_,
+            input_shape, output_shape, 3/*kernel*/, 1/*stride*/);
 
     for(int c=0;c<mNumOfClasses;c++){
         std::vector<BoxInfo> top_boxes_per_classes;
         for(int i=0;i<spatial_dims[2];i++){
             for(int j=0;j<spatial_dims[3];j++){
-                float max=-1;
-                int max_id = 0;
-                for(int k=0;k<9;k++){
-                    // get zero when index out of range
-                    int tmp_i = i+k/3-1;
-                    int tmp_j = j+k%3-1;
-                    if (tmp_i<0 || tmp_i>=spatial_dims[2] || tmp_j<0 || tmp_j>=spatial_dims[3]){
-                        continue;
-                    }
-                    int index = tmp_i*spatial_dims[3] + tmp_j;
-                    float value = total_dataPtr[index];
-                    if(max<value){
-                        max = value;
-                        max_id = k;
-                    }
-                }
-                if(max_id!=4){
-                    continue;
-                }
-                int index = (i+max_id/3-1)* spatial_dims[3] + (j+max_id%3-1);
-                if(total_dataPtr[index]<score_threshold){
+                // float max=-1;
+                // int max_id = 0;
+                // for(int k=0;k<9;k++){
+                // // get zero when index out of range
+                // int tmp_i = i+k/3-1;
+                // int tmp_j = j+k%3-1;
+                // if (tmp_i<0 || tmp_i>=spatial_dims[2] || tmp_j<0 || tmp_j>=spatial_dims[3]){
+                // continue;
+                // }
+                // int index = tmp_i*spatial_dims[3] + tmp_j;
+                // float value = total_dataPtr[index];
+                // if(max<value){
+                // max = value;
+                // max_id = k;
+                // }
+                // }
+                // if(max_id!=4){
+                // continue;
+                // }
+                int index = i* spatial_dims[3] + j;
+                if(!res_maxpool_[index]||total_dataPtr[index]<score_threshold){
                     continue;
                 }
                 BoxInfo box_info;

@@ -6,18 +6,21 @@ namespace opencl{
     template<typename T>
         void KernelSetArgFromList(GpuFunctionHandle kernel, int i,
                 T&& arg){
-            CHECK_EQ(clSetKernelArg(kernel, i, sizeof(T), (void *)&arg), CL_SUCCESS);
+            CHECK_EQ(clSetKernelArg(kernel, i, sizeof(T), (void *)&arg), CL_SUCCESS)
+                <<"error in index of arg list: "<<i;
         }
+
     template<typename FirstArg, typename ...RestArgs>
-        void KernelSetArgFromList(GpuFunctionHandle kernel, int i, FirstArg&& first_arg, RestArgs&&... rest_args){
-            CHECK_EQ(clSetKernelArg(kernel, i, sizeof(FirstArg), (void *)&first_arg), CL_SUCCESS);
+        void KernelSetArgFromList(GpuFunctionHandle kernel, int i,
+                FirstArg&& first_arg, RestArgs&&... rest_args){
+            KernelSetArgFromList(kernel, i, first_arg);
             KernelSetArgFromList(kernel, i+1, rest_args...);
         }
 
     template<typename ...Args>
         Status GpuSetKernel(GpuFunctionHandle kernel, Args&&... args){
             KernelSetArgFromList(kernel, 0, args...);
-            return CL_SUCCESS;
+            return true;
         }
 } // namespace opencl
 

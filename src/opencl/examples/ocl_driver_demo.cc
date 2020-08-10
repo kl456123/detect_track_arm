@@ -34,7 +34,7 @@ int main(int argc, char* argv[]){
     OCLDriver::SynchronousMemcpyH2D(ctx, GpuDevicePtr(b_ptr), b, bytes);
 
     // prepare kernel
-    std::string fname = "../opencl/cl/vec_add.cl";
+    std::string fname = "../src/opencl/opencl/cl/vec_add.cl";
     const char* kernel_name = "vector_add";
     GpuFunctionHandle kernel;
     GpuModuleHandle program=0;

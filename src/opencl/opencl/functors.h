@@ -7,8 +7,9 @@ namespace opencl{
     namespace functor{
         struct MaxPool2D{
             void operator()(const DeviceContext* ctx, const float* input,
-                    float* output, std::vector<int> output_shape,
-                int kernel_size, int stride_size);
+                    bool* output, const std::vector<int>& input_shape,
+                    const std::vector<int>& output_shape, int kernel_size,
+                    int stride_size);
         };
 
         struct Add{

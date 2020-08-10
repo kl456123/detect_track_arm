@@ -61,6 +61,10 @@ namespace opencl{
         // get kernel build info
         string GetKernelBuildInfo(){
         }
+
+        // get launch kernel info
+        string GetKernelLaunchInfo(){
+        }
     }// namespace
 
     GpuStreamHandle OCLDriver::default_stream_;
@@ -84,7 +88,8 @@ namespace opencl{
     /*static*/ Status OCLDriver::CreateContext(GpuDeviceHandle device, GpuContext* out){
         GpuStatus status;
         *out = clCreateContext(NULL, 1, &device, NULL, NULL, &status);
-        return status;
+        CHECK_EQ(status, CL_SUCCESS)<<"Failed to create context, error_code: "<<status;
+        return true;
     }
 
     /*static*/ void OCLDriver::DestroyContext(const GpuContext& context){
@@ -116,6 +121,7 @@ namespace opencl{
 
         GpuDevicePtr result = 0;
         result = clCreateBuffer(context, CL_MEM_READ_WRITE, bytes, NULL, &status);
+        CHECK_EQ(status, CL_SUCCESS)<<"Failed to Create Buffer, error code: "<<status;
         void* ptr = reinterpret_cast<void*>(result);
         return ptr;
     }
@@ -132,44 +138,45 @@ namespace opencl{
 
     /*static*/ Status OCLDriver::GetDevice(int device_ordinal, GpuDeviceHandle* device){
         if(devices.size()<device_ordinal){
-            return CL_DEVICE_NOT_AVAILABLE;
+            LOG(FATAL)<<"illegal device ordinal error code: "<<device_ordinal;
         }
 
         *device = devices[device_ordinal];
-        return CL_SUCCESS;
+        return true;
     }
 
     /*static*/ Status OCLDriver::GetDeviceName(GpuDeviceHandle device,
             string* device_name){
 
-        return CL_SUCCESS;
+        return true;
     }
 
     /*static*/ Status OCLDriver::SynchronousMemcpyD2H(const GpuContext& context, void* host_dst,
             GpuDevicePtr gpu_src, uint64 size){
         GpuStreamHandle default_stream=0;
-        auto ret = GetDefaultStream(context, &default_stream);
-        CHECK_EQ(ret, CL_SUCCESS)<<"Create Default Stream Failed";
+        CHECK(GetDefaultStream(context, &default_stream))<<"Create Default Stream Failed";
         GpuStatus status = clEnqueueReadBuffer(default_stream, gpu_src, CL_TRUE, 0, size, host_dst,
                 0/*num of wait events*/, NULL/*wait events*/, NULL/*event*/);
-        return status;
+        CHECK_EQ(status, CL_SUCCESS)<<"Failed to Read Buffer, Error Code: "<<status;
+        return true;
     }
 
     /*static*/ Status OCLDriver::SynchronousMemcpyH2D(const GpuContext& context,
             GpuDevicePtr gpu_dst,
             const void* host_src, uint64 size){
         GpuStreamHandle default_stream=0;
-        auto ret = GetDefaultStream(context, &default_stream);
+        CHECK(GetDefaultStream(context, &default_stream))<<"Create Default Stream Failed";
         GpuStatus status = clEnqueueWriteBuffer(default_stream, gpu_dst, CL_TRUE, 0, size, host_src,
                 0, NULL, NULL);
-        return status;
+        CHECK_EQ(status, CL_SUCCESS)<<"Failed to Write Buffer error code: "<<status;
+        return true;
     }
 
     /*static*/ Status OCLDriver::SynchronousMemcpyD2D(const GpuContext& context,
             GpuDevicePtr gpu_dst,
             GpuDevicePtr gpu_src, uint64 size){
         GpuStreamHandle default_stream=0;
-        auto ret = GetDefaultStream(context, &default_stream);
+        CHECK(GetDefaultStream(context, &default_stream))<<"Create Default Stream Failed";
         if(CL_SUCCESS==clEnqueueCopyBuffer(default_stream, gpu_src,
                     gpu_dst, 0, 0, size, 0, NULL, NULL)){
             return true;
@@ -179,21 +186,25 @@ namespace opencl{
 
     /*static*/ Status OCLDriver::GetDefaultStream(const GpuContext& context, GpuStreamHandle* stream){
         if(default_stream()==nullptr){
-            CreateStream(context, &default_stream_);
+            if(!CreateStream(context, &default_stream_)){
+                LOG(FATAL)<<"create stream failed";
+            }
         }
 
         *stream = default_stream_;
-        return CL_SUCCESS;
+        return true;
     }
 
     /*static*/ bool OCLDriver::AsynchronousMemcpyD2H(const GpuContext& context, void* host_dst,
             GpuDevicePtr gpu_src, uint64 size,
             GpuStreamHandle stream){
+        return true;
     }
 
     /*static*/ bool OCLDriver::AsynchronousMemcpyH2D(const GpuContext& context, GpuDevicePtr gpu_dst,
             const void* host_src, uint64 size,
             GpuStreamHandle stream){
+        return true;
     }
 
     /*static*/ bool OCLDriver::AsynchronousMemcpyD2D(const GpuContext& context, GpuDevicePtr gpu_dst,
@@ -218,7 +229,8 @@ namespace opencl{
         const size_t lws[3] = {block_dim_x, block_dim_y, block_dim_z};
         GpuStatus status = clEnqueueNDRangeKernel(stream, function, work_dim, NULL,
                 gws, lws, 0, NULL, NULL);
-        return status;
+        CHECK_EQ(status, CL_SUCCESS)<<" Failed to launch, error code: "<<status;
+        return true;
     }
 
     /*static*/ Status OCLDriver::LoadPtx(const GpuContext& context, const std::string& fname,
@@ -236,14 +248,14 @@ namespace opencl{
         // Create a program from the kernel source
         GpuModuleHandle program = clCreateProgramWithSource(context, 1,
                 &c_str, &str_size, &ret);
-        CHECK_EQ(ret, CL_SUCCESS)<<"Create Program Failed";
+        CHECK_EQ(ret, CL_SUCCESS)<<"Create Program Failed, error code: "<<ret;
 
         // Build the program
         ret = clBuildProgram(program, 1, &devices[0], NULL, NULL, NULL);
         CHECK_EQ(ret, CL_SUCCESS)<<"Build Program Failed, build log: "<<GetProgramBuildInfo(program);
 
         *module = program;
-        return CL_SUCCESS;
+        return true;
     }
 
     /* static */ bool OCLDriver::GetModuleFunction(const GpuContext& context,
@@ -270,6 +282,7 @@ namespace opencl{
         CHECK_EQ(clRetainContext(context), CL_SUCCESS);
         clFlush(stream);
         clFinish(stream);
+        return true;
     }
 
     /*static*/ void OCLDriver::DestroyStream(const GpuContext& context,

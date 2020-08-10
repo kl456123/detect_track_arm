@@ -22,8 +22,8 @@ namespace opencl{
                         float mid_value = input[(c*input_shape[1]+input_start_x+kernel_size/2)*input_shape[2]
                             +input_start_y+kernel_size/2];
                         for(int k=0; k<kernel_size*kernel_size; ++k){
-                            const int input_x = input_start_x + k/3;
-                            const int input_y = input_start_y + k%3;
+                            const int input_x = input_start_x + k/kernel_size;
+                            const int input_y = input_start_y + k%kernel_size;
                             if(input_x<0||input_x>=input_shape[1]||input_y<0||input_y>=input_shape[2]){
                                 continue;
                             }
@@ -47,8 +47,7 @@ namespace opencl{
             // create ctx
             GpuStatus status;
             GpuContext ctx;
-            status = OCLDriver::CreateContext(0, &ctx);
-            EXPECT_EQ(status, CL_SUCCESS);
+            EXPECT_TRUE(OCLDriver::CreateContext(0, &ctx));
 
             GpuStreamHandle stream;
             ASSERT_TRUE(OCLDriver::CreateStream(ctx, &stream));
@@ -59,13 +58,13 @@ namespace opencl{
 
             const int stride = 1;
             const int kernel_size = 3;
-            const int num_channels = 3;
-            const int height = 10;
-            const int width = 10;
+            const int num_channels = 1;
+            const int height = 5;
+            const int width = 5;
             const int num = height * width * num_channels;
 
             float input[num];
-            float output[num];
+            bool output[num];
             bool output_cpu[num];
             testing::InitRandomData<float>(input, num);
             // testing::InitRandomData(output, num);
@@ -74,7 +73,7 @@ namespace opencl{
             std::vector<int> output_shape = {num_channels, height, width};
             // stride = 1 so that input is the same size as output
             std::vector<int> input_shape = output_shape;
-            functor::MaxPool2D()(device_context, input, output, output_shape,
+            functor::MaxPool2D()(device_context, input, output, input_shape, output_shape,
                     kernel_size, stride);
 
             MaxPool2DCPU(input, output_cpu, input_shape, output_shape,
