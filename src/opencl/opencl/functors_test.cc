@@ -10,7 +10,7 @@ namespace opencl{
          * output_shape: (num_classes, height, width)
          */
         void MaxPool2DCPU(const float *input, bool *output, const std::vector<int>& input_shape,
-                const std::vector<int>& output_shape,int stride_size, int kernel_size){
+                const std::vector<int>& output_shape, int kernel_size, int stride_size){
             for(int c=0; c<output_shape[0]; c++){
                 for(int i=0; i<output_shape[1]; i++){
                     for(int j=0; j<output_shape[2]; j++){
@@ -80,7 +80,7 @@ namespace opencl{
                     kernel_size, stride);
 
             // check the result
-            // testing::CheckTheSameCPU(output, output_cpu, num);
+            testing::CheckTheSameCPU(output, output_cpu, num);
         }
     } // namespace
 } // namespace opencl
