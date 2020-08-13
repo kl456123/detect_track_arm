@@ -20,6 +20,9 @@ sudo apt install libeigen3-dev
 3. glog, build it from source
 
 4. MNN inference framework
+git clone mnn lib from github, compile it and generate
+lib and include headers put them in MNN/ directory
+
 
 
 
