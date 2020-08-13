@@ -31,7 +31,7 @@ namespace opencl{
             OCLDriver::SynchronousMemcpyH2D(ctx, GpuDevicePtr(input_ptr), input, input_bytes);
 
             // prepare kernel
-            std::string fname = "/home/indemind/Documents/Project/src/opencl/opencl/cl/max_pool.cl";
+            std::string fname = "/home/breakpoint/Documents/detect_track_arm/src/opencl/opencl/cl/max_pool.cl";
             const char* kernel_name = "max_pool_2d";
             GpuFunctionHandle kernel;
             GpuModuleHandle program=0;
